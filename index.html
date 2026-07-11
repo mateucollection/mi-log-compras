@@ -306,6 +306,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-check.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -323,6 +324,13 @@ const firebaseConfig = {
   appId: "1:9793830636:web:139a0e713a2a59b2b52fc9"
 };
 const app = initializeApp(firebaseConfig);
+
+// --- App Check: verifica que las peticiones vienen realmente de esta web ---
+const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LeVk04tAAAAAPry38N40rRHMdjBo7L8dyg38k54'),
+  isTokenAutoRefreshEnabled: true
+});
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
