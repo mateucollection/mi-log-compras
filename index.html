@@ -160,6 +160,38 @@
   .btn-ghost{background:none;color:var(--ink-mute);border:1px solid var(--line);}
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+
+  .mode-switch{display:flex;justify-content:center;gap:8px;margin:18px 0 22px;}
+  .mode-btn{
+    font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;
+    background:var(--pill-bg-grad);border:1px solid var(--pill-border);color:var(--text-muted);
+    padding:9px 20px;border-radius:8px;cursor:pointer;
+  }
+  .mode-btn.active{color:var(--brass-light);border-color:var(--brass);background:var(--toggle-bg);}
+
+  .wishlist-toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:18px;}
+  .wish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .wish-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;
+  }
+  .wish-img{width:100%;height:140px;object-fit:cover;background:linear-gradient(160deg,#dbe9ea,#b9d2d4);}
+  .wish-img-empty{
+    width:100%;height:140px;display:flex;align-items:center;justify-content:center;
+    font-size:34px;background:linear-gradient(160deg,#dbe9ea,#b9d2d4);
+  }
+  .wish-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .wish-name{font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--ink);line-height:1.15;}
+  .wish-price{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--wax-red);font-weight:700;}
+  .wish-notes{font-size:12.5px;color:var(--ink-mute);font-style:italic;}
+  .wish-link{
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--teal);text-decoration:none;margin-top:2px;
+  }
+  .wish-actions{display:flex;gap:8px;margin-top:auto;padding-top:8px;}
+
+  #publicWishlistScreen{display:none;}
+  #publicWishlistScreen.visible{display:block;}
   .search-input{
     flex:1;min-width:180px;font-family:'Zilla Slab',serif;font-size:14px;
     padding:9px 12px;border:1px solid var(--pill-border);border-radius:6px;
@@ -334,6 +366,13 @@
     <div class="sync-note"><span class="dot" id="syncDot"></span><span id="syncText">Sincronizado</span></div>
   </header>
 
+  <div class="mode-switch">
+    <button class="mode-btn active" data-mode="compras" id="modeCompras">🛍️ Mis Compras</button>
+    <button class="mode-btn" data-mode="wishlist" id="modeWishlist">🎁 Wishlist</button>
+  </div>
+
+  <div id="comprasSection">
+
   <div class="totals" id="totals"></div>
 
   <div class="tabs">
@@ -394,9 +433,20 @@
 
   <div id="list"></div>
 
+  </div>
+
+  <div id="wishlistSection" style="display:none;">
+    <div class="wishlist-toolbar">
+      <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
+      <button class="fab" id="btnOpenAddWish">+ Añadir a la wishlist</button>
+    </div>
+    <div id="wishlistList"></div>
+  </div>
+
   <footer>Acceso privado · guardado automáticamente</footer>
 </div>
 </div>
+
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
@@ -443,6 +493,54 @@
   </div>
 </div>
 
+<!-- WISHLIST MODAL -->
+<div class="modal-backdrop" id="wishModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" id="wishModalClose">✕</button>
+    <h2 id="wishModalTitle">🎁 Nuevo deseo</h2>
+    <div class="grid">
+      <div class="full">
+        <label for="w-nombre">Producto</label>
+        <input type="text" id="w-nombre" placeholder="Ej. OP-16 Display / Booster Hancock...">
+      </div>
+      <div class="full">
+        <label>Imagen (opcional)</label>
+        <div class="img-picker">
+          <div class="img-preview-wrap">
+            <img class="img-preview-img" id="wImgPreview" alt="">
+            <span class="img-preview-icon" id="wImgPreviewIcon">🎁</span>
+          </div>
+          <div class="img-inputs">
+            <input type="url" id="w-imgurl" placeholder="Pega una URL de imagen...">
+            <label class="file-btn" for="w-imgfile">📁 Subir desde el ordenador</label>
+            <input type="file" id="w-imgfile" accept="image/*" style="display:none;">
+          </div>
+        </div>
+      </div>
+      <div class="full"><label for="w-precio">Precio aproximado (€)</label><input type="number" id="w-precio" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="full"><label for="w-url">Enlace del producto (opcional)</label><input type="url" id="w-url" placeholder="https://..."></div>
+      <div class="full"><label for="w-notas">Notas (opcional)</label><input type="text" id="w-notas" placeholder="Ej. talla M, edición limitada..."></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="wBtnCancel">Cancelar</button>
+      <button class="btn btn-primary" id="wBtnSave">Añadir a la wishlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLIC READ-ONLY WISHLIST VIEW -->
+<div id="publicWishlistScreen">
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Lista de deseos compartida</div>
+      <h1>🎁 <span>WISHLIST</span></h1>
+      <div class="sub">Esto es lo que le haría ilusión recibir — puedes verlo, pero no editarlo.</div>
+    </header>
+    <div id="publicWishlistList"></div>
+    <footer>Vista pública de solo lectura</footer>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-check.js";
@@ -474,6 +572,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+const urlParams = new URLSearchParams(location.search);
+const sharedWishlistUid = urlParams.get('wishlist');
+const isPublicView = !!sharedWishlistUid;
+
 let purchases = [];
 let currentTab = 'pendientes';
 let editingId = null;
@@ -487,6 +589,13 @@ let filterYear = 'all';
 let filterStore = 'all';
 let selectedYear = new Date().getFullYear();
 const MONTHLY_BUDGET = 200;
+
+let wishlistItems = [];
+let unsubscribeWishSnapshot = null;
+let unsubscribePublicWishSnapshot = null;
+let editingWishId = null;
+let pendingWishImage = '';
+let appMode = 'compras';
 
 /* ---- Theme (light/dark) ---- */
 const themeToggle = document.getElementById('themeToggle');
@@ -515,7 +624,9 @@ document.getElementById('btnGoogleLogin').addEventListener('click', async ()=>{
 document.getElementById('btnLogout').addEventListener('click', ()=> signOut(auth));
 
 onAuthStateChanged(auth, (user)=>{
+  if(isPublicView) return; // en la vista pública compartida no gestionamos sesión
   if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+  if(unsubscribeWishSnapshot){ unsubscribeWishSnapshot(); unsubscribeWishSnapshot = null; }
 
   if(user){
     currentUid = user.uid;
@@ -523,6 +634,7 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById('appScreen').classList.add('visible');
     document.getElementById('userPhoto').src = user.photoURL || '';
     listenToPurchases(user.uid);
+    listenToWishlist(user.uid);
   } else {
     currentUid = null;
     document.getElementById('appScreen').classList.remove('visible');
@@ -557,6 +669,76 @@ async function purgeExpiredTrash(){
   for(const p of expired){
     await deleteDoc(doc(db, 'users', currentUid, 'purchases', p.id));
   }
+}
+
+/* ---- Wishlist: gestión privada (dueño) ---- */
+function listenToWishlist(uid){
+  const colRef = collection(db, 'wishlists', uid, 'items');
+  unsubscribeWishSnapshot = onSnapshot(colRef, (snap)=>{
+    wishlistItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderWishlist();
+  }, (err)=>{
+    console.error(err);
+  });
+}
+
+async function saveWishItem(id, data){
+  await setDoc(doc(db, 'wishlists', currentUid, 'items', id), data);
+}
+async function deleteWishItem(id){
+  await deleteDoc(doc(db, 'wishlists', currentUid, 'items', id));
+}
+
+/* ---- Wishlist: vista pública (solo lectura, sin sesión) ---- */
+function listenPublicWishlist(uid){
+  const colRef = collection(db, 'wishlists', uid, 'items');
+  unsubscribePublicWishSnapshot = onSnapshot(colRef, (snap)=>{
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPublicWishlist(items);
+  }, (err)=>{
+    document.getElementById('publicWishlistList').innerHTML = `<div class="empty"><b>No se pudo cargar</b>Este enlace no es válido o la lista ya no está disponible.</div>`;
+    console.error(err);
+  });
+}
+
+function buildWishCardHtml(item, showActions){
+  return `
+    <div class="wish-card">
+      ${item.image ? `<img class="wish-img" src="${escapeHtml(item.image)}" alt="">` : `<div class="wish-img-empty">🎁</div>`}
+      <div class="wish-body">
+        <div class="wish-name">${escapeHtml(item.name)}</div>
+        ${item.price ? `<div class="wish-price">${fmtMoney(item.price)}</div>` : ''}
+        ${item.notes ? `<div class="wish-notes">${escapeHtml(item.notes)}</div>` : ''}
+        ${item.url ? `<a class="wish-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Ver producto ↗</a>` : ''}
+        ${showActions ? `
+          <div class="wish-actions">
+            <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
+            <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderWishlist(){
+  const list = document.getElementById('wishlistList');
+  if(wishlistItems.length === 0){
+    list.innerHTML = `<div class="empty"><b>Tu wishlist está vacía</b>Añade cosas que te gustaría comprar más adelante.</div>`;
+    return;
+  }
+  const sorted = [...wishlistItems].sort((a,b)=> (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, true)).join('')}</div>`;
+}
+
+function renderPublicWishlist(items){
+  const list = document.getElementById('publicWishlistList');
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty"><b>Wishlist vacía</b>Todavía no hay nada apuntado aquí.</div>`;
+    return;
+  }
+  const sorted = [...items].sort((a,b)=> (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, false)).join('')}</div>`;
 }
 
 function setSync(text, saving){
@@ -975,6 +1157,121 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     render();
   });
 });
+
+/* ---- Mode switch: Compras / Wishlist ---- */
+document.getElementById('modeCompras').addEventListener('click', ()=>{
+  document.getElementById('modeCompras').classList.add('active');
+  document.getElementById('modeWishlist').classList.remove('active');
+  document.getElementById('comprasSection').style.display = 'block';
+  document.getElementById('wishlistSection').style.display = 'none';
+});
+document.getElementById('modeWishlist').addEventListener('click', ()=>{
+  document.getElementById('modeWishlist').classList.add('active');
+  document.getElementById('modeCompras').classList.remove('active');
+  document.getElementById('wishlistSection').style.display = 'block';
+  document.getElementById('comprasSection').style.display = 'none';
+});
+
+/* ---- Compartir wishlist ---- */
+document.getElementById('btnShareWishlist').addEventListener('click', async ()=>{
+  const url = `${location.origin}${location.pathname}?wishlist=${currentUid}`;
+  const btn = document.getElementById('btnShareWishlist');
+  const original = btn.textContent;
+  try{
+    await navigator.clipboard.writeText(url);
+    btn.textContent = '✔ Enlace copiado';
+  }catch(e){
+    prompt('Copia este enlace para compartir tu wishlist:', url);
+  }
+  setTimeout(()=>{ btn.textContent = original; }, 2500);
+});
+
+/* ---- Modal de wishlist ---- */
+const wishBackdrop = document.getElementById('wishModalBackdrop');
+
+function updateWishPreview(){
+  const img = document.getElementById('wImgPreview');
+  const icon = document.getElementById('wImgPreviewIcon');
+  if(pendingWishImage){
+    img.src = pendingWishImage;
+    img.classList.add('has-img');
+    icon.classList.add('hidden');
+  }else{
+    img.removeAttribute('src');
+    img.classList.remove('has-img');
+    icon.classList.remove('hidden');
+  }
+}
+function openWishModal(item){
+  editingWishId = item ? item.id : null;
+  document.getElementById('wishModalTitle').textContent = item ? '✎ Editar deseo' : '🎁 Nuevo deseo';
+  document.getElementById('wBtnSave').textContent = item ? 'Guardar cambios' : 'Añadir a la wishlist';
+  document.getElementById('w-nombre').value = item ? item.name : '';
+  document.getElementById('w-precio').value = item ? (item.price || '') : '';
+  document.getElementById('w-url').value = item ? (item.url || '') : '';
+  document.getElementById('w-notas').value = item ? (item.notes || '') : '';
+  document.getElementById('w-imgurl').value = (item && item.image && !item.image.startsWith('data:')) ? item.image : '';
+  pendingWishImage = item ? (item.image || '') : '';
+  updateWishPreview();
+  wishBackdrop.classList.add('open');
+}
+function closeWishModal(){ wishBackdrop.classList.remove('open'); editingWishId = null; pendingWishImage = ''; }
+
+document.getElementById('btnOpenAddWish').addEventListener('click', ()=>openWishModal(null));
+document.getElementById('wishModalClose').addEventListener('click', closeWishModal);
+document.getElementById('wBtnCancel').addEventListener('click', closeWishModal);
+wishBackdrop.addEventListener('click', (e)=>{ if(e.target === wishBackdrop) closeWishModal(); });
+
+document.getElementById('w-imgurl').addEventListener('input', (e)=>{ pendingWishImage = e.target.value.trim(); updateWishPreview(); });
+document.getElementById('w-imgfile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ pendingWishImage = reader.result; document.getElementById('w-imgurl').value=''; updateWishPreview(); };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('wBtnSave').addEventListener('click', async ()=>{
+  const name = document.getElementById('w-nombre').value.trim();
+  if(!name){ alert('Ponle un nombre al producto antes de guardarlo.'); return; }
+
+  const payload = {
+    name,
+    price: Number(document.getElementById('w-precio').value || 0),
+    url: document.getElementById('w-url').value.trim(),
+    notes: document.getElementById('w-notas').value.trim(),
+    image: pendingWishImage,
+    createdAt: editingWishId ? (wishlistItems.find(w=>w.id===editingWishId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  const id = editingWishId || uid();
+  await saveWishItem(id, payload);
+  closeWishModal();
+});
+
+document.getElementById('wishlistList').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  const item = wishlistItems.find(w=>w.id===id);
+  if(!item) return;
+
+  if(action === 'editwish'){
+    openWishModal(item);
+  } else if(action === 'deletewish'){
+    if(!confirm(`¿Eliminar "${item.name}" de la wishlist? No hay papelera para esto, se borra directamente.`)) return;
+    await deleteWishItem(id);
+  }
+});
+
+/* ---- Arranque de la vista pública (enlace compartido, sin sesión) ---- */
+if(isPublicView){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('publicWishlistScreen').classList.add('visible');
+  listenPublicWishlist(sharedWishlistUid);
+}
 </script>
 </body>
 </html>
