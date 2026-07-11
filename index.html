@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitácora de compras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Zilla+Slab:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ocean-1:#08121e; --ocean-2:#0f2038; --ocean-3:#16324f;
+    --paper:#f4ecd9; --paper-2:#e9dcbe; --paper-shadow:#d8c69a;
+    --brass:#c89b3c; --brass-light:#e4c069;
+    --wax-red:#a5332a; --teal:#276e6a;
+    --ink:#2a2013; --ink-mute:#6b5d43; --line:#c3ae7c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #17324f 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #0e2338 0%, transparent 55%),
+      linear-gradient(180deg,var(--ocean-1),#050b13 80%);
+    font-family:'Zilla Slab', serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:36px 18px 90px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+
+  /* ---- Login screen ---- */
+  #loginScreen{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:70vh;text-align:center;gap:18px;
+  }
+  #loginScreen .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.3em;
+    color:var(--brass-light);text-transform:uppercase;
+  }
+  #loginScreen h1{
+    font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,7vw,50px);
+    color:var(--paper);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.4);
+  }
+  #loginScreen p{color:#8fa4bb;font-size:14.5px;max-width:400px;}
+  .google-btn{
+    display:flex;align-items:center;gap:10px;
+    background:var(--paper);color:var(--ink);border:1px solid var(--line);
+    font-family:'Zilla Slab',serif;font-weight:600;font-size:15px;
+    padding:12px 24px;border-radius:8px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+  .google-btn:hover{background:#fffdf7;}
+  .google-btn svg{width:20px;height:20px;}
+  #loginError{color:#e8a0a0;font-size:13px;font-family:'JetBrains Mono',monospace;max-width:380px;}
+
+  #appScreen{display:none;}
+  #appScreen.visible{display:block;}
+
+  header{text-align:center;margin-bottom:20px;position:relative;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.3em;color:var(--brass-light);text-transform:uppercase;margin-bottom:8px;}
+  h1{font-family:'Bebas Neue', sans-serif;font-size:clamp(36px,6.5vw,54px);letter-spacing:.03em;color:var(--paper);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.4);}
+  h1 span{color:var(--brass-light);}
+  .sub{color:#8fa4bb;font-size:14.5px;margin-top:8px;max-width:520px;margin-inline:auto;}
+
+  .userbar{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    margin-top:14px;font-size:12.5px;color:#7f93a8;font-family:'JetBrains Mono',monospace;
+  }
+  .userbar img{width:22px;height:22px;border-radius:50%;}
+  .logout-btn{
+    background:none;border:1px solid #2c4a68;color:#7f93a8;font-family:'JetBrains Mono',monospace;
+    font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+  }
+
+  .totals{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:24px 0 28px;}
+  .pill{background:linear-gradient(180deg,#132842,#0c1d33);border:1px solid #274763;border-radius:10px;padding:12px 20px;text-align:center;min-width:130px;}
+  .pill b{display:block;font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--brass-light);}
+  .pill span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7f93a8;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid #24405e;align-items:center;}
+  .tab-btn{font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;font-size:18px;background:none;border:none;color:#7f93a8;padding:10px 8px 12px;cursor:pointer;position:relative;}
+  .tab-btn.active{color:var(--brass-light);}
+  .tab-btn.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:var(--brass);border-radius:2px 2px 0 0;}
+  .tab-btn .count{font-family:'JetBrains Mono',monospace;font-size:11px;background:#1c3350;padding:1px 7px;border-radius:8px;margin-left:6px;}
+  .fab{margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:var(--wax-red);color:#fbeee9;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;box-shadow:0 2px 0 #6f2019;}
+  .fab:active{transform:translateY(1px);box-shadow:none;}
+
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(4,10,18,.72);align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
+  .modal-backdrop.open{display:flex;}
+  .modal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px 24px 22px;max-width:560px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.5);position:relative;}
+  .modal h2{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--wax-red);margin:0 0 16px;}
+  .modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:var(--ink-mute);cursor:pointer;line-height:1;}
+  .grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px 14px;}
+  .grid .full{grid-column:1/-1;}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-mute);margin-bottom:4px;}
+  input[type=text],input[type=number],input[type=date],input[type=url]{width:100%;font-family:'Zilla Slab',serif;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:#fffdf7;color:var(--ink);}
+  input:focus{outline:2px solid var(--teal);outline-offset:1px;}
+  .radio-row{display:flex;gap:14px;margin-top:2px;}
+  .radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer;}
+
+  .img-picker{display:flex;gap:12px;align-items:center;}
+  .img-preview{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid var(--brass);box-shadow:0 0 0 1px #7a5d20 inset, 0 2px 6px rgba(0,0,0,.35);background:#e2d4ac;}
+  .img-preview.empty{display:flex;align-items:center;justify-content:center;font-size:20px;color:#b3a077;}
+  .img-inputs{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .file-btn{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:#e9dcbe;border:1px solid var(--line);border-radius:5px;padding:6px 10px;cursor:pointer;color:var(--ink-mute);width:fit-content;}
+
+  .modal-actions{margin-top:18px;display:flex;gap:10px;justify-content:flex-end;}
+  .btn{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.05em;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;}
+  .btn-primary{background:var(--wax-red);color:#fbeee9;box-shadow:0 3px 0 #6f2019;}
+  .btn-primary:active{transform:translateY(2px);box-shadow:0 1px 0 #6f2019;}
+  .btn-primary:disabled{opacity:.6;cursor:default;}
+  .btn-ghost{background:none;color:var(--ink-mute);border:1px solid var(--line);}
+
+  #list{display:flex;flex-direction:column;gap:12px;}
+  .empty{text-align:center;color:#8095ab;padding:60px 20px;font-size:14.5px;}
+  .empty b{display:block;color:var(--brass-light);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:6px;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;gap:16px;align-items:center;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .2s;}
+  .card.done{opacity:.78;}
+  .porthole{width:64px;height:64px;border-radius:50%;flex-shrink:0;object-fit:cover;border:3px solid var(--brass);box-shadow:0 0 0 1px #7a5d20 inset, inset 0 0 10px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.3);background:linear-gradient(160deg,#dbe9ea,#b9d2d4);}
+  .porthole.empty{display:flex;align-items:center;justify-content:center;font-size:22px;}
+
+  .card-body{flex:1;min-width:0;}
+  .card-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+  .card-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.02em;color:var(--ink);line-height:1.15;}
+  .price{text-align:right;flex-shrink:0;}
+  .price b{display:block;font-family:'JetBrains Mono',monospace;font-size:19px;color:var(--wax-red);}
+  .price small{font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+
+  .card-meta{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:12.5px;color:var(--ink-mute);font-family:'JetBrains Mono',monospace;margin-top:5px;}
+  .card-meta b{color:var(--ink);font-weight:600;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;}
+  .badge.envio{background:#dbe9ea;color:var(--teal);}
+  .badge.tienda{background:#f1e2c2;color:#8a5f14;}
+
+  .card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .btn-mini{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:5px;border:1px solid transparent;cursor:pointer;background:none;}
+  .btn-arrived{background:var(--teal);color:#eafaf7;box-shadow:0 2px 0 #123f3c;}
+  .btn-arrived:active{transform:translateY(1px);box-shadow:none;}
+  .btn-undo{border-color:#a89a72;color:var(--ink-mute);}
+  .btn-edit{border-color:#8fa5b0;color:var(--teal);}
+  .btn-del{border-color:#c9a1a1;color:var(--wax-red);}
+
+  .stamp{position:absolute;top:14px;right:16px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--teal);border:2px solid var(--teal);padding:2px 8px;border-radius:4px;transform:rotate(7deg);opacity:.85;}
+
+  footer{text-align:center;margin-top:36px;font-size:11.5px;color:#5f7791;font-family:'JetBrains Mono',monospace;}
+
+  .sync-note{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#7f93a8;font-family:'JetBrains Mono',monospace;margin-top:10px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#3aa876;}
+  .dot.saving{background:var(--brass-light);}
+
+  @media (max-width:560px){
+    .grid{grid-template-columns:1fr 1fr;}
+    .card{flex-direction:column;align-items:flex-start;}
+    .card-top{width:100%;}
+    .porthole{width:56px;height:56px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="eyebrow">Bitácora personal de reservas</div>
+  <h1>MI LOG DE <span>COMPRAS</span></h1>
+  <p>Acceso privado. Solo tu cuenta de Google puede entrar a ver y editar estos datos.</p>
+  <button class="google-btn" id="btnGoogleLogin">
+    <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 35.4 27 36.3 24 36.3c-5.2 0-9.6-3.3-11.2-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.6 5.4C41.6 35.6 44 30.1 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+    Iniciar sesión con Google
+  </button>
+  <div id="loginError"></div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen">
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Bitácora personal de reservas</div>
+    <h1>MI LOG DE <span>COMPRAS</span></h1>
+    <div class="sub">Cada reserva otaku anotada, con su imagen, su tienda y su rumbo — hasta que atraque en tu casa.</div>
+    <div class="userbar">
+      <img id="userPhoto" src="" alt="">
+      <span id="userEmail"></span>
+      <button class="logout-btn" id="btnLogout">Cerrar sesión</button>
+    </div>
+    <div class="sync-note"><span class="dot" id="syncDot"></span><span id="syncText">Sincronizado</span></div>
+  </header>
+
+  <div class="totals" id="totals"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="pendientes" id="tabPendientes">EN CURSO <span class="count" id="countPendientes">0</span></button>
+    <button class="tab-btn" data-tab="historial" id="tabHistorial">HISTORIAL <span class="count" id="countHistorial">0</span></button>
+    <button class="fab" id="btnOpenAdd">+ Nueva anotación</button>
+  </div>
+
+  <div id="list"></div>
+
+  <footer>Guardado en la nube (Firestore) · solo tu cuenta puede ver estos datos</footer>
+</div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2 id="modalTitle">✎ Nueva anotación</h2>
+    <div class="grid">
+      <div class="full">
+        <label for="f-nombre">Producto</label>
+        <input type="text" id="f-nombre" placeholder="Ej. OP-16 Display / Booster Hancock...">
+      </div>
+      <div class="full">
+        <label>Imagen (opcional)</label>
+        <div class="img-picker">
+          <img class="img-preview empty" id="imgPreview" alt="">
+          <div class="img-inputs">
+            <input type="url" id="f-imgurl" placeholder="Pega una URL de imagen...">
+            <label class="file-btn" for="f-imgfile">📁 Subir desde el ordenador</label>
+            <input type="file" id="f-imgfile" accept="image/*" style="display:none;">
+          </div>
+        </div>
+      </div>
+      <div><label for="f-tienda">Tienda</label><input type="text" id="f-tienda" placeholder="Ej. B-Game, Aquelarre..."></div>
+      <div><label for="f-unidades">Unidades</label><input type="number" id="f-unidades" min="1" value="1"></div>
+      <div><label for="f-precio">Precio total (€)</label><input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00"></div>
+      <div><label for="f-lanzamiento">Fecha de lanzamiento</label><input type="date" id="f-lanzamiento"></div>
+      <div><label for="f-compra">Fecha de compra/reserva</label><input type="date" id="f-compra"></div>
+      <div>
+        <label>Entrega</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f-entrega" value="Envío" checked> Envío</label>
+          <label><input type="radio" name="f-entrega" value="Recogida"> Recogida</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+      <button class="btn btn-primary" id="btnSave">Añadir a la lista</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// --- Tu configuración de Firebase ---
+const firebaseConfig = {
+  apiKey: "AIzaSyA9ks3YamDlVjThFnFK5NxMxRY3RaDJvdY",
+  authDomain: "compras-log-b4339.firebaseapp.com",
+  projectId: "compras-log-b4339",
+  storageBucket: "compras-log-b4339.firebasestorage.app",
+  messagingSenderId: "9793830636",
+  appId: "1:9793830636:web:139a0e713a2a59b2b52fc9"
+};
+const ALLOWED_EMAIL = "mateucollection@gmail.com";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let purchases = [];
+let currentTab = 'pendientes';
+let editingId = null;
+let pendingImage = '';
+let unsubscribeSnapshot = null;
+let currentUid = null;
+
+/* ---- Auth ---- */
+document.getElementById('btnGoogleLogin').addEventListener('click', async ()=>{
+  document.getElementById('loginError').textContent = '';
+  try{
+    await signInWithPopup(auth, provider);
+  }catch(e){
+    document.getElementById('loginError').textContent = 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  }
+});
+document.getElementById('btnLogout').addEventListener('click', ()=> signOut(auth));
+
+onAuthStateChanged(auth, (user)=>{
+  if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+
+  if(user && user.email === ALLOWED_EMAIL){
+    currentUid = user.uid;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').classList.add('visible');
+    document.getElementById('userPhoto').src = user.photoURL || '';
+    document.getElementById('userEmail').textContent = user.email;
+    listenToPurchases(user.uid);
+  } else if(user && user.email !== ALLOWED_EMAIL){
+    document.getElementById('loginError').textContent = 'Esta cuenta no tiene acceso a esta bitácora.';
+    signOut(auth);
+    document.getElementById('appScreen').classList.remove('visible');
+    document.getElementById('loginScreen').style.display = 'flex';
+  } else {
+    currentUid = null;
+    document.getElementById('appScreen').classList.remove('visible');
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+
+/* ---- Firestore live sync ---- */
+function listenToPurchases(uid){
+  const colRef = collection(db, 'users', uid, 'purchases');
+  unsubscribeSnapshot = onSnapshot(colRef, (snap)=>{
+    purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+    setSync('Sincronizado', false);
+  }, (err)=>{
+    setSync('Error de conexión', false);
+    console.error(err);
+  });
+}
+
+function setSync(text, saving){
+  document.getElementById('syncText').textContent = text;
+  document.getElementById('syncDot').classList.toggle('saving', !!saving);
+}
+
+async function saveItem(id, data){
+  setSync('Guardando...', true);
+  await setDoc(doc(db, 'users', currentUid, 'purchases', id), data);
+}
+async function deleteItem(id){
+  setSync('Guardando...', true);
+  await deleteDoc(doc(db, 'users', currentUid, 'purchases', id));
+}
+
+function uid(){ return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+function fmtDate(d){ if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+function fmtMoney(n){ return Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'; }
+function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str || ''; return div.innerHTML; }
+
+function render(){
+  const pendientes = purchases.filter(p=>!p.arrived).sort((a,b)=> (a.launchDate||'9999').localeCompare(b.launchDate||'9999'));
+  const historial = purchases.filter(p=>p.arrived).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
+
+  document.getElementById('countPendientes').textContent = pendientes.length;
+  document.getElementById('countHistorial').textContent = historial.length;
+
+  const totalPendiente = pendientes.reduce((s,p)=>s+Number(p.price||0),0);
+  const totalHistorial = historial.reduce((s,p)=>s+Number(p.price||0),0);
+  const unidadesPendientes = pendientes.reduce((s,p)=>s+Number(p.units||0),0);
+  document.getElementById('totals').innerHTML = `
+    <div class="pill"><b>${fmtMoney(totalPendiente)}</b><span>Pendiente de recibir</span></div>
+    <div class="pill"><b>${unidadesPendientes}</b><span>Unidades en camino</span></div>
+    <div class="pill"><b>${fmtMoney(totalHistorial)}</b><span>Gastado (recibido)</span></div>
+  `;
+
+  const list = document.getElementById('list');
+  const data = currentTab === 'pendientes' ? pendientes : historial;
+
+  if(data.length === 0){
+    list.innerHTML = `<div class="empty"><b>${currentTab==='pendientes' ? 'Nada en curso' : 'Historial vacío'}</b>${currentTab==='pendientes' ? 'Añade tu próxima reserva con el botón de arriba.' : 'Cuando marques algo como recibido, aparecerá aquí.'}</div>`;
+    return;
+  }
+
+  list.innerHTML = data.map(p => `
+    <div class="card ${p.arrived ? 'done' : ''}">
+      ${p.arrived ? `<div class="stamp">RECIBIDO</div>` : ''}
+      ${p.image ? `<img class="porthole" src="${escapeHtml(p.image)}" alt="">` : `<div class="porthole empty">🏴‍☠️</div>`}
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${escapeHtml(p.name)}</div>
+            <div class="card-meta">
+              <span>🏬 <b>${escapeHtml(p.store || '—')}</b></span>
+              <span>📦 <b>${p.units || 1}</b> ud.</span>
+              <span>🚀 <b>${fmtDate(p.launchDate)}</b></span>
+              <span>🗓 <b>${fmtDate(p.purchaseDate)}</b></span>
+              <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}</span>
+            </div>
+          </div>
+          <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
+        </div>
+        <div class="card-actions">
+          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
+          <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">✕ Eliminar</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ---- Modal ---- */
+const backdrop = document.getElementById('modalBackdrop');
+const imgPreview = document.getElementById('imgPreview');
+
+function updatePreview(){
+  if(pendingImage){ imgPreview.src = pendingImage; imgPreview.classList.remove('empty'); }
+  else{ imgPreview.removeAttribute('src'); imgPreview.classList.add('empty'); }
+}
+function openModal(item){
+  editingId = item ? item.id : null;
+  document.getElementById('modalTitle').textContent = item ? '✎ Editar anotación' : '✎ Nueva anotación';
+  document.getElementById('btnSave').textContent = item ? 'Guardar cambios' : 'Añadir a la lista';
+  document.getElementById('f-nombre').value = item ? item.name : '';
+  document.getElementById('f-tienda').value = item ? item.store : '';
+  document.getElementById('f-unidades').value = item ? item.units : 1;
+  document.getElementById('f-precio').value = item ? item.price : '';
+  document.getElementById('f-lanzamiento').value = item ? item.launchDate || '' : '';
+  document.getElementById('f-compra').value = item ? item.purchaseDate || '' : '';
+  document.querySelector(`input[name=f-entrega][value="${item ? item.delivery : 'Envío'}"]`).checked = true;
+  document.getElementById('f-imgurl').value = (item && item.image && !item.image.startsWith('data:')) ? item.image : '';
+  pendingImage = item ? (item.image || '') : '';
+  updatePreview();
+  backdrop.classList.add('open');
+}
+function closeModal(){ backdrop.classList.remove('open'); editingId = null; pendingImage = ''; }
+
+document.getElementById('btnOpenAdd').addEventListener('click', ()=>openModal(null));
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('btnCancel').addEventListener('click', closeModal);
+backdrop.addEventListener('click', (e)=>{ if(e.target === backdrop) closeModal(); });
+
+document.getElementById('f-imgurl').addEventListener('input', (e)=>{ pendingImage = e.target.value.trim(); updatePreview(); });
+document.getElementById('f-imgfile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ pendingImage = reader.result; document.getElementById('f-imgurl').value=''; updatePreview(); };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('btnSave').addEventListener('click', async ()=>{
+  const name = document.getElementById('f-nombre').value.trim();
+  if(!name){ alert('Ponle un nombre al producto antes de guardarlo.'); return; }
+
+  const payload = {
+    name,
+    store: document.getElementById('f-tienda').value.trim(),
+    units: Number(document.getElementById('f-unidades').value || 1),
+    price: Number(document.getElementById('f-precio').value || 0),
+    launchDate: document.getElementById('f-lanzamiento').value,
+    purchaseDate: document.getElementById('f-compra').value,
+    delivery: document.querySelector('input[name=f-entrega]:checked').value,
+    image: pendingImage,
+    arrived: false,
+    arrivedAt: null
+  };
+
+  const id = editingId || uid();
+  if(editingId){
+    const existing = purchases.find(p=>p.id===editingId);
+    payload.arrived = existing.arrived;
+    payload.arrivedAt = existing.arrivedAt;
+  }
+  await saveItem(id, payload);
+  closeModal();
+});
+
+document.getElementById('list').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  const item = purchases.find(p=>p.id===id);
+  if(!item) return;
+
+  if(action === 'arrive'){
+    await saveItem(id, { ...item, arrived:true, arrivedAt: new Date().toISOString().slice(0,10) });
+  } else if(action === 'undo'){
+    await saveItem(id, { ...item, arrived:false, arrivedAt:null });
+  } else if(action === 'edit'){
+    openModal(item);
+  } else if(action === 'delete'){
+    if(!confirm(`¿Eliminar "${item.name}" de la lista?`)) return;
+    await deleteItem(id);
+  }
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    render();
+  });
+});
+</script>
+</body>
+</html>
