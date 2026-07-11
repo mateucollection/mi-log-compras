@@ -97,7 +97,7 @@
   .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.3em;color:var(--brass-light);text-transform:uppercase;margin-bottom:8px;}
   h1{font-family:'Bebas Neue', sans-serif;font-size:clamp(36px,6.5vw,54px);letter-spacing:.03em;color:var(--text-header);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.15);}
   h1 span{color:var(--brass-light);}
-  .sub{color:var(--text-sub);font-size:14.5px;margin-top:8px;max-width:520px;margin-inline:auto;}
+  .sub{color:var(--text-sub);font-size:14.5px;margin-top:8px;max-width:680px;margin-inline:auto;}
 
   .userbar{
     display:flex;align-items:center;justify-content:center;gap:10px;
@@ -130,6 +130,7 @@
   .modal-close:hover{color:var(--wax-red);}
   .grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px 14px;}
   .grid .full{grid-column:1/-1;}
+  .dates-row{display:grid;grid-template-columns:1fr 1fr;gap:16px 14px;}
   label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-mute);margin-bottom:5px;}
   input[type=text],input[type=number],input[type=date],input[type=url]{width:100%;font-family:'Zilla Slab',serif;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fffdf7;color:var(--ink);transition:border-color .15s, box-shadow .15s;}
   input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(39,110,106,.15);}
@@ -207,6 +208,17 @@
   .stats-empty{color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;}
 
   .budget-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;}
+  .budget-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px;}
+  .budget-nav-btn{
+    background:var(--toggle-bg);border:1px solid var(--pill-border);border-radius:6px;
+    width:26px;height:26px;color:var(--text-muted);cursor:pointer;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .budget-nav-btn:disabled{opacity:.3;cursor:default;}
+  .budget-nav-label{
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--brass-light);min-width:110px;text-align:center;
+  }
   .budget-ring{
     width:130px;height:130px;border-radius:50%;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;position:relative;
@@ -281,6 +293,7 @@
   }
   @media (max-width:400px){
     .grid{grid-template-columns:1fr;}
+    .dates-row{grid-template-columns:1fr;}
     .price{text-align:left;}
   }
 </style>
@@ -351,6 +364,27 @@
       <option value="Envío">Solo envío</option>
       <option value="Recogida">Solo recogida</option>
     </select>
+    <select class="filter-select" id="filterMonth">
+      <option value="all">Todos los meses</option>
+      <option value="01">Enero</option>
+      <option value="02">Febrero</option>
+      <option value="03">Marzo</option>
+      <option value="04">Abril</option>
+      <option value="05">Mayo</option>
+      <option value="06">Junio</option>
+      <option value="07">Julio</option>
+      <option value="08">Agosto</option>
+      <option value="09">Septiembre</option>
+      <option value="10">Octubre</option>
+      <option value="11">Noviembre</option>
+      <option value="12">Diciembre</option>
+    </select>
+    <select class="filter-select" id="filterYear">
+      <option value="all">Todos los años</option>
+    </select>
+    <select class="filter-select" id="filterStore">
+      <option value="all">Todas las tiendas</option>
+    </select>
   </div>
 
   <div id="list"></div>
@@ -385,9 +419,11 @@
       <div><label for="f-tienda">Tienda</label><input type="text" id="f-tienda" list="storesList" placeholder="Ej. B-Game, Aquelarre..." autocomplete="off"><datalist id="storesList"></datalist></div>
       <div><label for="f-unidades">Unidades</label><input type="number" id="f-unidades" min="1" value="1"></div>
       <div><label for="f-precio">Precio total (€)</label><input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00"></div>
-      <div><label for="f-compra">Fecha de compra/reserva</label><input type="date" id="f-compra"></div>
-      <div><label for="f-lanzamiento">Fecha de lanzamiento</label><input type="date" id="f-lanzamiento"></div>
-      <div>
+      <div class="full dates-row">
+        <div><label for="f-compra">Fecha de compra/reserva</label><input type="date" id="f-compra"></div>
+        <div><label for="f-lanzamiento">Fecha de lanzamiento</label><input type="date" id="f-lanzamiento"></div>
+      </div>
+      <div class="full">
         <label>Entrega</label>
         <div class="radio-row">
           <label><input type="radio" name="f-entrega" value="Envío" checked> Envío</label>
@@ -441,6 +477,9 @@ let unsubscribeSnapshot = null;
 let currentUid = null;
 let searchQuery = '';
 let filterDelivery = 'all';
+let filterMonth = 'all';
+let filterYear = 'all';
+let filterStore = 'all';
 let selectedYear = new Date().getFullYear();
 const MONTHLY_BUDGET = 200;
 
@@ -539,8 +578,23 @@ function updateStoreSuggestions(){
   document.getElementById('storesList').innerHTML = stores.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
 }
 
+function updateFilterOptions(){
+  const stores = [...new Set(purchases.map(p => (p.store || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const storeSelect = document.getElementById('filterStore');
+  const currentStoreVal = storeSelect.value;
+  storeSelect.innerHTML = `<option value="all">Todas las tiendas</option>` + stores.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  if(stores.includes(currentStoreVal)) storeSelect.value = currentStoreVal;
+
+  const years = [...new Set(purchases.filter(p=>p.purchaseDate).map(p => p.purchaseDate.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+  const yearSelect = document.getElementById('filterYear');
+  const currentYearVal = yearSelect.value;
+  yearSelect.innerHTML = `<option value="all">Todos los años</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if(years.includes(currentYearVal)) yearSelect.value = currentYearVal;
+}
+
 function render(){
   updateStoreSuggestions();
+  updateFilterOptions();
   const pendientes = purchases.filter(p=>!p.arrived && !p.trashed).sort((a,b)=> (a.purchaseDate||'9999').localeCompare(b.purchaseDate||'9999'));
   const historial = purchases.filter(p=>p.arrived && !p.trashed).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
   const papelera = purchases.filter(p=>p.trashed).sort((a,b)=> (b.trashedAt||'').localeCompare(a.trashedAt||''));
@@ -574,9 +628,18 @@ function render(){
   if(filterDelivery !== 'all'){
     data = data.filter(p => p.delivery === filterDelivery);
   }
+  if(filterMonth !== 'all'){
+    data = data.filter(p => p.purchaseDate && p.purchaseDate.slice(5,7) === filterMonth);
+  }
+  if(filterYear !== 'all'){
+    data = data.filter(p => p.purchaseDate && p.purchaseDate.slice(0,4) === filterYear);
+  }
+  if(filterStore !== 'all'){
+    data = data.filter(p => (p.store||'') === filterStore);
+  }
 
   if(data.length === 0){
-    const hasActiveFilters = query || filterDelivery !== 'all';
+    const hasActiveFilters = query || filterDelivery !== 'all' || filterMonth !== 'all' || filterYear !== 'all' || filterStore !== 'all';
     const emptyMsg = hasActiveFilters ? ['Sin resultados','Prueba con otra búsqueda o quita los filtros.']
       : currentTab==='pendientes' ? ['Nada en curso','Añade tu próxima reserva con el botón de arriba.']
       : currentTab==='historial' ? ['Historial vacío','Cuando marques algo como recibido, aparecerá aquí.']
@@ -621,7 +684,7 @@ function render(){
             <div class="card-meta">
               <span>🏬 <b>${escapeHtml(p.store || '—')}</b></span>
               <span>📦 <b>${p.units || 1}</b> ud.</span>
-              <span>🗓 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
+              <span>🛒 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
               <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
               <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}</span>
             </div>
@@ -746,6 +809,18 @@ document.getElementById('filterDelivery').addEventListener('change', (e)=>{
   filterDelivery = e.target.value;
   render();
 });
+document.getElementById('filterMonth').addEventListener('change', (e)=>{
+  filterMonth = e.target.value;
+  render();
+});
+document.getElementById('filterYear').addEventListener('change', (e)=>{
+  filterYear = e.target.value;
+  render();
+});
+document.getElementById('filterStore').addEventListener('change', (e)=>{
+  filterStore = e.target.value;
+  render();
+});
 
 document.getElementById('btnStats').addEventListener('click', ()=>{
   const panel = document.getElementById('statsPanel');
@@ -808,14 +883,16 @@ function renderChart(){
   `;
 }
 
+let budgetViewMonth = new Date().toISOString().slice(0,7); // YYYY-MM, mes que se está viendo
+
 function renderBudget(){
   const container = document.getElementById('budgetContainer');
-  const now = new Date();
-  const currentMonthKey = now.toISOString().slice(0,7);
   const monthNamesLong = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const [viewYear, viewMonthNum] = budgetViewMonth.split('-').map(Number);
+  const isCurrentMonth = budgetViewMonth === new Date().toISOString().slice(0,7);
 
   const spent = purchases
-    .filter(p => !p.trashed && p.purchaseDate && p.purchaseDate.startsWith(currentMonthKey))
+    .filter(p => !p.trashed && p.purchaseDate && p.purchaseDate.startsWith(budgetViewMonth))
     .reduce((s,p) => s + Number(p.price || 0), 0);
 
   const pct = Math.min(100, (spent / MONTHLY_BUDGET) * 100);
@@ -825,23 +902,27 @@ function renderBudget(){
   if(spent <= MONTHLY_BUDGET * 0.8){
     statusColor = 'var(--teal)';
     statusText = '✔ Dentro del presupuesto';
-    detailText = `Te quedan ${fmtMoney(remaining)} este mes`;
+    detailText = `Te quedan ${fmtMoney(remaining)}${isCurrentMonth ? ' este mes' : ''}`;
   } else if(spent <= MONTHLY_BUDGET){
     statusColor = 'var(--brass)';
     statusText = '⚠ Cerca del límite';
-    detailText = `Te quedan ${fmtMoney(remaining)} este mes`;
+    detailText = `Te quedan ${fmtMoney(remaining)}${isCurrentMonth ? ' este mes' : ''}`;
   } else {
     statusColor = 'var(--wax-red)';
     statusText = '✕ Límite superado';
-    detailText = `Te has pasado en ${fmtMoney(Math.abs(remaining))} este mes`;
+    detailText = `Te pasaste en ${fmtMoney(Math.abs(remaining))}`;
   }
 
   container.innerHTML = `
+    <div class="budget-nav">
+      <button class="budget-nav-btn" id="btnPrevMonth" title="Mes anterior">←</button>
+      <span class="budget-nav-label">${monthNamesLong[viewMonthNum-1]} ${viewYear}</span>
+      <button class="budget-nav-btn" id="btnNextMonth" title="Mes siguiente" ${isCurrentMonth ? 'disabled' : ''}>→</button>
+    </div>
     <div class="budget-wrap" style="--ring-color:${statusColor};--pct:${pct}">
       <div class="budget-ring">
         <div class="budget-ring-text">
           <span class="budget-ring-pct">${Math.round(pct)}%</span>
-          <span class="budget-ring-label">${monthNamesLong[now.getMonth()]}</span>
         </div>
       </div>
       <div class="budget-info">
@@ -852,6 +933,19 @@ function renderBudget(){
       </div>
     </div>
   `;
+
+  document.getElementById('btnPrevMonth').addEventListener('click', ()=>{
+    const d = new Date(viewYear, viewMonthNum - 2, 1); // -1 para ir al mes anterior, -1 más por índice 0
+    budgetViewMonth = d.toISOString().slice(0,7);
+    renderBudget();
+  });
+  if(!isCurrentMonth){
+    document.getElementById('btnNextMonth').addEventListener('click', ()=>{
+      const d = new Date(viewYear, viewMonthNum, 1); // avanza un mes
+      budgetViewMonth = d.toISOString().slice(0,7);
+      renderBudget();
+    });
+  }
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn=>{
