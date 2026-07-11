@@ -438,6 +438,7 @@
   <div id="wishlistSection" style="display:none;">
     <div class="wishlist-toolbar">
       <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
+      <button class="stats-btn" id="btnRegenWishlist" title="Invalida el enlace anterior y crea uno nuevo">🔄 Regenerar enlace</button>
       <button class="fab" id="btnOpenAddWish">+ Añadir a la wishlist</button>
     </div>
     <div id="wishlistList"></div>
@@ -548,7 +549,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, getDocs, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // --- Tu configuración de Firebase ---
@@ -573,8 +574,8 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 const urlParams = new URLSearchParams(location.search);
-const sharedWishlistUid = urlParams.get('wishlist');
-const isPublicView = !!sharedWishlistUid;
+const sharedWishlistToken = urlParams.get('wishlist');
+const isPublicView = !!sharedWishlistToken;
 
 let purchases = [];
 let currentTab = 'pendientes';
@@ -596,6 +597,7 @@ let unsubscribePublicWishSnapshot = null;
 let editingWishId = null;
 let pendingWishImage = '';
 let appMode = 'compras';
+let wishlistToken = null;
 
 /* ---- Theme (light/dark) ---- */
 const themeToggle = document.getElementById('themeToggle');
@@ -634,7 +636,7 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById('appScreen').classList.add('visible');
     document.getElementById('userPhoto').src = user.photoURL || '';
     listenToPurchases(user.uid);
-    listenToWishlist(user.uid);
+    ensureWishlistToken(user.uid);
   } else {
     currentUid = null;
     document.getElementById('appScreen').classList.remove('visible');
@@ -671,9 +673,27 @@ async function purgeExpiredTrash(){
   }
 }
 
-/* ---- Wishlist: gestión privada (dueño) ---- */
-function listenToWishlist(uid){
-  const colRef = collection(db, 'wishlists', uid, 'items');
+/* ---- Wishlist: gestión privada (dueño), basada en un token regenerable ---- */
+function randomToken(){
+  if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID().replace(/-/g,'');
+  return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
+
+async function ensureWishlistToken(uid){
+  const ref = doc(db, 'users', uid, 'settings', 'wishlistToken');
+  const snap = await getDoc(ref);
+  if(snap.exists() && snap.data().token){
+    wishlistToken = snap.data().token;
+  } else {
+    wishlistToken = randomToken();
+    await setDoc(ref, { token: wishlistToken });
+  }
+  listenToWishlist(wishlistToken);
+}
+
+function listenToWishlist(token){
+  if(unsubscribeWishSnapshot){ unsubscribeWishSnapshot(); unsubscribeWishSnapshot = null; }
+  const colRef = collection(db, 'wishlists', token, 'items');
   unsubscribeWishSnapshot = onSnapshot(colRef, (snap)=>{
     wishlistItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderWishlist();
@@ -683,15 +703,55 @@ function listenToWishlist(uid){
 }
 
 async function saveWishItem(id, data){
-  await setDoc(doc(db, 'wishlists', currentUid, 'items', id), data);
+  await setDoc(doc(db, 'wishlists', wishlistToken, 'items', id), data);
 }
 async function deleteWishItem(id){
-  await deleteDoc(doc(db, 'wishlists', currentUid, 'items', id));
+  await deleteDoc(doc(db, 'wishlists', wishlistToken, 'items', id));
+}
+
+async function regenerateWishlistLink(){
+  const oldToken = wishlistToken;
+  const newToken = randomToken();
+
+  const oldColRef = collection(db, 'wishlists', oldToken, 'items');
+  const snap = await getDocs(oldColRef);
+
+  // Paso crítico: copiar los deseos al token nuevo Y apuntar el puntero ahí,
+  // todo en UNA sola operación atómica (o se aplica entero, o no se aplica nada).
+  // Así, si algo falla a mitad, el enlace antiguo sigue funcionando con normalidad
+  // en vez de quedarse en un estado a medias.
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => {
+    batch.set(doc(db, 'wishlists', newToken, 'items', d.id), d.data());
+  });
+  batch.set(doc(db, 'users', currentUid, 'settings', 'wishlistToken'), { token: newToken });
+  await batch.commit();
+
+  // A partir de aquí, el enlace nuevo ya es 100% funcional y es la fuente de verdad.
+  // Lo que queda es solo limpieza: borrar los datos del token viejo para que
+  // ese enlace deje de mostrar nada. Si algo de esto fallara, no hay pérdida de
+  // datos ni enlaces rotos, como mucho el enlace viejo tardaría en "vaciarse".
+  wishlistToken = newToken;
+  listenToWishlist(newToken);
+
+  const failedDeletes = [];
+  for(const d of snap.docs){
+    try{
+      await deleteDoc(doc(db, 'wishlists', oldToken, 'items', d.id));
+    }catch(e){
+      failedDeletes.push(d.id);
+    }
+  }
+  if(failedDeletes.length > 0){
+    console.warn('No se pudieron limpiar todos los datos del enlace antiguo:', failedDeletes);
+    return { cleanupWarning: true };
+  }
+  return { cleanupWarning: false };
 }
 
 /* ---- Wishlist: vista pública (solo lectura, sin sesión) ---- */
-function listenPublicWishlist(uid){
-  const colRef = collection(db, 'wishlists', uid, 'items');
+function listenPublicWishlist(token){
+  const colRef = collection(db, 'wishlists', token, 'items');
   unsubscribePublicWishSnapshot = onSnapshot(colRef, (snap)=>{
     const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderPublicWishlist(items);
@@ -1174,7 +1234,7 @@ document.getElementById('modeWishlist').addEventListener('click', ()=>{
 
 /* ---- Compartir wishlist ---- */
 document.getElementById('btnShareWishlist').addEventListener('click', async ()=>{
-  const url = `${location.origin}${location.pathname}?wishlist=${currentUid}`;
+  const url = `${location.origin}${location.pathname}?wishlist=${wishlistToken}`;
   const btn = document.getElementById('btnShareWishlist');
   const original = btn.textContent;
   try{
@@ -1184,6 +1244,22 @@ document.getElementById('btnShareWishlist').addEventListener('click', async ()=>
     prompt('Copia este enlace para compartir tu wishlist:', url);
   }
   setTimeout(()=>{ btn.textContent = original; }, 2500);
+});
+
+document.getElementById('btnRegenWishlist').addEventListener('click', async ()=>{
+  if(!confirm('Esto crea un enlace nuevo y deja sin acceso al enlace anterior (quien lo tuviera ya no verá nada). ¿Continuar?')) return;
+  const btn = document.getElementById('btnRegenWishlist');
+  const original = btn.textContent;
+  btn.textContent = '⏳ Regenerando...';
+  btn.disabled = true;
+  try{
+    const result = await regenerateWishlistLink();
+    btn.textContent = result.cleanupWarning ? '✔ Enlace nuevo (revisa consola)' : '✔ Enlace regenerado';
+  }catch(e){
+    btn.textContent = '✕ Error, prueba de nuevo';
+    console.error(e);
+  }
+  setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 3000);
 });
 
 /* ---- Modal de wishlist ---- */
@@ -1270,7 +1346,7 @@ if(isPublicView){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').classList.remove('visible');
   document.getElementById('publicWishlistScreen').classList.add('visible');
-  listenPublicWishlist(sharedWishlistUid);
+  listenPublicWishlist(sharedWishlistToken);
 }
 </script>
 </body>
