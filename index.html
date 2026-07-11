@@ -439,7 +439,7 @@
     <div class="wishlist-toolbar">
       <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
       <button class="stats-btn" id="btnRegenWishlist" title="Invalida el enlace anterior y crea uno nuevo">🔄 Regenerar enlace</button>
-      <button class="fab" id="btnOpenAddWish">+ Añadir a la wishlist</button>
+      <button class="fab" id="btnOpenAddWish" disabled>⏳ Preparando wishlist...</button>
     </div>
     <div id="wishlistList"></div>
   </div>
@@ -680,15 +680,26 @@ function randomToken(){
 }
 
 async function ensureWishlistToken(uid){
-  const ref = doc(db, 'users', uid, 'settings', 'wishlistToken');
-  const snap = await getDoc(ref);
-  if(snap.exists() && snap.data().token){
-    wishlistToken = snap.data().token;
-  } else {
-    wishlistToken = randomToken();
-    await setDoc(ref, { token: wishlistToken });
+  const addBtn = document.getElementById('btnOpenAddWish');
+  addBtn.disabled = true;
+  addBtn.textContent = '⏳ Preparando wishlist...';
+  try{
+    const ref = doc(db, 'users', uid, 'settings', 'wishlistToken');
+    const snap = await getDoc(ref);
+    if(snap.exists() && snap.data().token){
+      wishlistToken = snap.data().token;
+    } else {
+      wishlistToken = randomToken();
+      await setDoc(ref, { token: wishlistToken });
+    }
+    listenToWishlist(wishlistToken);
+  }catch(e){
+    console.error('No se pudo preparar la wishlist:', e);
+    document.getElementById('wishlistList').innerHTML = `<div class="empty"><b>No se pudo cargar la wishlist</b>Revisa que las reglas de Firestore incluyan el bloque "settings". Detalle: ${e.code || e.message}</div>`;
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = '+ Añadir a la wishlist';
   }
-  listenToWishlist(wishlistToken);
 }
 
 function listenToWishlist(token){
@@ -1321,8 +1332,20 @@ document.getElementById('wBtnSave').addEventListener('click', async ()=>{
   };
 
   const id = editingWishId || uid();
-  await saveWishItem(id, payload);
-  closeWishModal();
+  const saveBtn = document.getElementById('wBtnSave');
+  const original = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando...';
+  try{
+    await saveWishItem(id, payload);
+    closeWishModal();
+  }catch(e){
+    console.error('No se pudo guardar el deseo:', e);
+    alert(`No se pudo guardar: ${e.code || e.message}\n\nRevisa que las reglas de Firestore estén publicadas correctamente.`);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = original;
+  }
 });
 
 document.getElementById('wishlistList').addEventListener('click', async (e)=>{
