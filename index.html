@@ -322,8 +322,6 @@ const firebaseConfig = {
   messagingSenderId: "9793830636",
   appId: "1:9793830636:web:139a0e713a2a59b2b52fc9"
 };
-const ALLOWED_EMAIL = "mateucollection@gmail.com";
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -365,17 +363,12 @@ document.getElementById('btnLogout').addEventListener('click', ()=> signOut(auth
 onAuthStateChanged(auth, (user)=>{
   if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
 
-  if(user && user.email === ALLOWED_EMAIL){
+  if(user){
     currentUid = user.uid;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').classList.add('visible');
     document.getElementById('userPhoto').src = user.photoURL || '';
     listenToPurchases(user.uid);
-  } else if(user && user.email !== ALLOWED_EMAIL){
-    document.getElementById('loginError').textContent = 'Esta cuenta no tiene acceso a esta bitácora.';
-    signOut(auth);
-    document.getElementById('appScreen').classList.remove('visible');
-    document.getElementById('loginScreen').style.display = 'flex';
   } else {
     currentUid = null;
     document.getElementById('appScreen').classList.remove('visible');
@@ -392,8 +385,15 @@ function listenToPurchases(uid){
     setSync('Sincronizado', false);
     purgeExpiredTrash();
   }, (err)=>{
-    setSync('Error de conexión', false);
-    console.error(err);
+    if(err.code === 'permission-denied'){
+      document.getElementById('appScreen').classList.remove('visible');
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('loginError').textContent = 'Esta cuenta no tiene acceso a esta bitácora.';
+      signOut(auth);
+    } else {
+      setSync('Error de conexión', false);
+      console.error(err);
+    }
   });
 }
 
