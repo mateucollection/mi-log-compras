@@ -13,20 +13,55 @@
     --brass:#c89b3c; --brass-light:#e4c069;
     --wax-red:#a5332a; --teal:#276e6a;
     --ink:#2a2013; --ink-mute:#6b5d43; --line:#c3ae7c;
+
+    --page-grad:
+      radial-gradient(1200px 600px at 15% -10%, #17324f 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #0e2338 0%, transparent 55%),
+      linear-gradient(180deg,var(--ocean-1),#050b13 80%);
+    --text-header:var(--paper);
+    --text-sub:#8fa4bb;
+    --text-muted:#7f93a8;
+    --pill-bg-grad:linear-gradient(180deg,#132842,#0c1d33);
+    --pill-border:#274763;
+    --tab-count-bg:#1c3350;
+    --logout-border:#2c4a68;
+    --toggle-bg:#132842;
+    --toggle-border:#274763;
+  }
+  :root[data-theme="light"]{
+    --page-grad:
+      radial-gradient(1200px 600px at 15% -10%, #dfeef2 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 5%, #f7eed9 0%, transparent 55%),
+      linear-gradient(180deg,#eef6f8,#fbf5e6 80%);
+    --text-header:#1c3350;
+    --text-sub:#4d6478;
+    --text-muted:#5d7d8c;
+    --pill-bg-grad:linear-gradient(180deg,#ffffff,#eef3f5);
+    --pill-border:#cfe0e6;
+    --tab-count-bg:#dbe7ec;
+    --logout-border:#c3d3da;
+    --toggle-bg:#ffffff;
+    --toggle-border:#cfe0e6;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:
-      radial-gradient(1200px 600px at 15% -10%, #17324f 0%, transparent 60%),
-      radial-gradient(900px 500px at 100% 10%, #0e2338 0%, transparent 55%),
-      linear-gradient(180deg,var(--ocean-1),#050b13 80%);
+    background:var(--page-grad);
     font-family:'Zilla Slab', serif;
     color:var(--ink);
     min-height:100vh;
     padding:36px 18px 90px;
+    transition:background .25s ease;
   }
   .wrap{max-width:960px;margin:0 auto;}
+
+  .theme-toggle{
+    position:fixed;top:16px;right:16px;z-index:40;
+    width:38px;height:38px;border-radius:50%;
+    background:var(--toggle-bg);border:1px solid var(--toggle-border);
+    font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
 
   /* ---- Login screen ---- */
   #loginScreen{
@@ -39,9 +74,9 @@
   }
   #loginScreen h1{
     font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,7vw,50px);
-    color:var(--paper);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.4);
+    color:var(--text-header);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.15);
   }
-  #loginScreen p{color:#8fa4bb;font-size:14.5px;max-width:400px;}
+  #loginScreen p{color:var(--text-sub);font-size:14.5px;max-width:400px;}
   .google-btn{
     display:flex;align-items:center;gap:10px;
     background:var(--paper);color:var(--ink);border:1px solid var(--line);
@@ -51,60 +86,70 @@
   }
   .google-btn:hover{background:#fffdf7;}
   .google-btn svg{width:20px;height:20px;}
-  #loginError{color:#e8a0a0;font-size:13px;font-family:'JetBrains Mono',monospace;max-width:380px;}
+  #loginError{color:var(--wax-red);font-size:13px;font-family:'JetBrains Mono',monospace;max-width:380px;}
 
   #appScreen{display:none;}
   #appScreen.visible{display:block;}
 
   header{text-align:center;margin-bottom:20px;position:relative;}
   .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.3em;color:var(--brass-light);text-transform:uppercase;margin-bottom:8px;}
-  h1{font-family:'Bebas Neue', sans-serif;font-size:clamp(36px,6.5vw,54px);letter-spacing:.03em;color:var(--paper);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.4);}
+  h1{font-family:'Bebas Neue', sans-serif;font-size:clamp(36px,6.5vw,54px);letter-spacing:.03em;color:var(--text-header);margin:0;text-shadow:0 2px 0 rgba(0,0,0,.15);}
   h1 span{color:var(--brass-light);}
-  .sub{color:#8fa4bb;font-size:14.5px;margin-top:8px;max-width:520px;margin-inline:auto;}
+  .sub{color:var(--text-sub);font-size:14.5px;margin-top:8px;max-width:520px;margin-inline:auto;}
 
   .userbar{
     display:flex;align-items:center;justify-content:center;gap:10px;
-    margin-top:14px;font-size:12.5px;color:#7f93a8;font-family:'JetBrains Mono',monospace;
+    margin-top:14px;font-size:12.5px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;
   }
   .userbar img{width:22px;height:22px;border-radius:50%;}
   .logout-btn{
-    background:none;border:1px solid #2c4a68;color:#7f93a8;font-family:'JetBrains Mono',monospace;
+    background:none;border:1px solid var(--logout-border);color:var(--text-muted);font-family:'JetBrains Mono',monospace;
     font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
   }
 
   .totals{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:24px 0 28px;}
-  .pill{background:linear-gradient(180deg,#132842,#0c1d33);border:1px solid #274763;border-radius:10px;padding:12px 20px;text-align:center;min-width:130px;}
+  .pill{background:var(--pill-bg-grad);border:1px solid var(--pill-border);border-radius:10px;padding:12px 20px;text-align:center;min-width:130px;}
   .pill b{display:block;font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--brass-light);}
-  .pill span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7f93a8;}
+  .pill span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}
 
-  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid #24405e;align-items:center;}
-  .tab-btn{font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;font-size:18px;background:none;border:none;color:#7f93a8;padding:10px 8px 12px;cursor:pointer;position:relative;}
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid var(--pill-border);align-items:center;flex-wrap:wrap;}
+  .tab-btn{font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;font-size:18px;background:none;border:none;color:var(--text-muted);padding:10px 8px 12px;cursor:pointer;position:relative;}
   .tab-btn.active{color:var(--brass-light);}
   .tab-btn.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:var(--brass);border-radius:2px 2px 0 0;}
-  .tab-btn .count{font-family:'JetBrains Mono',monospace;font-size:11px;background:#1c3350;padding:1px 7px;border-radius:8px;margin-left:6px;}
+  .tab-btn .count{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--tab-count-bg);padding:1px 7px;border-radius:8px;margin-left:6px;color:var(--text-muted);}
   .fab{margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:var(--wax-red);color:#fbeee9;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;box-shadow:0 2px 0 #6f2019;}
   .fab:active{transform:translateY(1px);box-shadow:none;}
 
   .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(4,10,18,.72);align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
   .modal-backdrop.open{display:flex;}
-  .modal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px 24px 22px;max-width:560px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.5);position:relative;}
-  .modal h2{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--wax-red);margin:0 0 16px;}
-  .modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:var(--ink-mute);cursor:pointer;line-height:1;}
-  .grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px 14px;}
+  .modal{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:26px 26px 22px;max-width:560px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5);position:relative;}
+  .modal h2{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--wax-red);margin:0 0 18px;}
+  .modal-close{position:absolute;top:18px;right:20px;background:none;border:none;font-size:20px;color:var(--ink-mute);cursor:pointer;line-height:1;transition:color .15s;}
+  .modal-close:hover{color:var(--wax-red);}
+  .grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px 14px;}
   .grid .full{grid-column:1/-1;}
-  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-mute);margin-bottom:4px;}
-  input[type=text],input[type=number],input[type=date],input[type=url]{width:100%;font-family:'Zilla Slab',serif;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:#fffdf7;color:var(--ink);}
-  input:focus{outline:2px solid var(--teal);outline-offset:1px;}
-  .radio-row{display:flex;gap:14px;margin-top:2px;}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-mute);margin-bottom:5px;}
+  input[type=text],input[type=number],input[type=date],input[type=url]{width:100%;font-family:'Zilla Slab',serif;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fffdf7;color:var(--ink);transition:border-color .15s, box-shadow .15s;}
+  input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(39,110,106,.15);}
+  .radio-row{display:flex;gap:14px;margin-top:4px;}
   .radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer;}
 
-  .img-picker{display:flex;gap:12px;align-items:center;}
-  .img-preview{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid var(--brass);box-shadow:0 0 0 1px #7a5d20 inset, 0 2px 6px rgba(0,0,0,.35);background:#e2d4ac;}
-  .img-preview.empty{display:flex;align-items:center;justify-content:center;font-size:20px;color:#b3a077;}
-  .img-inputs{flex:1;display:flex;flex-direction:column;gap:6px;}
-  .file-btn{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:#e9dcbe;border:1px solid var(--line);border-radius:5px;padding:6px 10px;cursor:pointer;color:var(--ink-mute);width:fit-content;}
+  .img-picker{display:flex;gap:14px;align-items:center;}
+  .img-preview-wrap{
+    width:68px;height:68px;border-radius:50%;flex-shrink:0;position:relative;overflow:hidden;
+    border:3px solid var(--brass);background:var(--paper-2);
+    box-shadow:0 0 0 1px #7a5d20 inset, 0 2px 6px rgba(0,0,0,.25);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .img-preview-img{width:100%;height:100%;object-fit:cover;display:none;}
+  .img-preview-img.has-img{display:block;}
+  .img-preview-icon{font-size:22px;color:var(--ink-mute);}
+  .img-preview-icon.hidden{display:none;}
+  .img-inputs{flex:1;display:flex;flex-direction:column;gap:7px;}
+  .file-btn{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:7px 11px;cursor:pointer;color:var(--ink-mute);width:fit-content;transition:background .15s;}
+  .file-btn:hover{background:var(--paper-shadow);}
 
-  .modal-actions{margin-top:18px;display:flex;gap:10px;justify-content:flex-end;}
+  .modal-actions{margin-top:20px;display:flex;gap:10px;justify-content:flex-end;}
   .btn{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.05em;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;}
   .btn-primary{background:var(--wax-red);color:#fbeee9;box-shadow:0 3px 0 #6f2019;}
   .btn-primary:active{transform:translateY(2px);box-shadow:0 1px 0 #6f2019;}
@@ -141,23 +186,38 @@
   .btn-edit{border-color:#8fa5b0;color:var(--teal);}
   .btn-del{border-color:#c9a1a1;color:var(--wax-red);}
 
+  .card.trashed{border-style:dashed;opacity:.82;}
+  .badge.trash-badge{background:#f1dcdc;color:var(--wax-red);}
+
   .stamp{position:absolute;top:14px;right:16px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--teal);border:2px solid var(--teal);padding:2px 8px;border-radius:4px;transform:rotate(7deg);opacity:.85;}
 
-  footer{text-align:center;margin-top:36px;font-size:11.5px;color:#5f7791;font-family:'JetBrains Mono',monospace;}
+  footer{text-align:center;margin-top:36px;font-size:11.5px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
 
-  .sync-note{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#7f93a8;font-family:'JetBrains Mono',monospace;margin-top:10px;}
+  .sync-note{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:10px;}
   .dot{width:7px;height:7px;border-radius:50%;background:#3aa876;}
   .dot.saving{background:var(--brass-light);}
 
   @media (max-width:560px){
-    .grid{grid-template-columns:1fr 1fr;}
+    body{padding:30px 14px 80px;}
+    .theme-toggle{top:10px;right:10px;width:34px;height:34px;font-size:14px;}
+    .tabs{flex-wrap:wrap;}
+    .fab{width:100%;order:3;margin-left:0;margin-top:8px;text-align:center;}
+    .grid{grid-template-columns:1fr 1fr;gap:10px 12px;}
     .card{flex-direction:column;align-items:flex-start;}
     .card-top{width:100%;}
     .porthole{width:56px;height:56px;}
+    .modal-backdrop{padding:20px 10px;}
+    .modal{padding:20px 18px 18px;}
+  }
+  @media (max-width:400px){
+    .grid{grid-template-columns:1fr;}
+    .price{text-align:left;}
   }
 </style>
 </head>
 <body>
+
+<button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema claro/oscuro">🌙</button>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
@@ -178,10 +238,9 @@
   <header>
     <div class="eyebrow">Bitácora personal de reservas</div>
     <h1>MI LOG DE <span>COMPRAS</span></h1>
-    <div class="sub">Cada reserva otaku anotada, con su imagen, su tienda y su rumbo — hasta que atraque en tu casa.</div>
+    <div class="sub">Apunta cada reserva, sigue su estado y no pierdas de vista lo que aún tienes que recibir.</div>
     <div class="userbar">
       <img id="userPhoto" src="" alt="">
-      <span id="userEmail"></span>
       <button class="logout-btn" id="btnLogout">Cerrar sesión</button>
     </div>
     <div class="sync-note"><span class="dot" id="syncDot"></span><span id="syncText">Sincronizado</span></div>
@@ -192,12 +251,13 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="pendientes" id="tabPendientes">EN CURSO <span class="count" id="countPendientes">0</span></button>
     <button class="tab-btn" data-tab="historial" id="tabHistorial">HISTORIAL <span class="count" id="countHistorial">0</span></button>
+    <button class="tab-btn" data-tab="papelera" id="tabPapelera">🗑 PAPELERA <span class="count" id="countPapelera">0</span></button>
     <button class="fab" id="btnOpenAdd">+ Nueva anotación</button>
   </div>
 
   <div id="list"></div>
 
-  <footer>Guardado en la nube (Firestore) · solo tu cuenta puede ver estos datos</footer>
+  <footer>Acceso privado · guardado automáticamente</footer>
 </div>
 </div>
 
@@ -213,7 +273,10 @@
       <div class="full">
         <label>Imagen (opcional)</label>
         <div class="img-picker">
-          <img class="img-preview empty" id="imgPreview" alt="">
+          <div class="img-preview-wrap">
+            <img class="img-preview-img" id="imgPreview" alt="">
+            <span class="img-preview-icon" id="imgPreviewIcon">🏴‍☠️</span>
+          </div>
           <div class="img-inputs">
             <input type="url" id="f-imgurl" placeholder="Pega una URL de imagen...">
             <label class="file-btn" for="f-imgfile">📁 Subir desde el ordenador</label>
@@ -221,7 +284,7 @@
           </div>
         </div>
       </div>
-      <div><label for="f-tienda">Tienda</label><input type="text" id="f-tienda" placeholder="Ej. B-Game, Aquelarre..."></div>
+      <div><label for="f-tienda">Tienda</label><input type="text" id="f-tienda" list="storesList" placeholder="Ej. B-Game, Aquelarre..." autocomplete="off"><datalist id="storesList"></datalist></div>
       <div><label for="f-unidades">Unidades</label><input type="number" id="f-unidades" min="1" value="1"></div>
       <div><label for="f-precio">Precio total (€)</label><input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00"></div>
       <div><label for="f-lanzamiento">Fecha de lanzamiento</label><input type="date" id="f-lanzamiento"></div>
@@ -273,6 +336,21 @@ let pendingImage = '';
 let unsubscribeSnapshot = null;
 let currentUid = null;
 
+/* ---- Theme (light/dark) ---- */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('theme-pref', theme);
+}
+const savedTheme = localStorage.getItem('theme-pref');
+const systemLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+applyTheme(savedTheme || (systemLight ? 'light' : 'dark'));
+themeToggle.addEventListener('click', ()=>{
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'light' ? 'dark' : 'light');
+});
+
 /* ---- Auth ---- */
 document.getElementById('btnGoogleLogin').addEventListener('click', async ()=>{
   document.getElementById('loginError').textContent = '';
@@ -292,7 +370,6 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').classList.add('visible');
     document.getElementById('userPhoto').src = user.photoURL || '';
-    document.getElementById('userEmail').textContent = user.email;
     listenToPurchases(user.uid);
   } else if(user && user.email !== ALLOWED_EMAIL){
     document.getElementById('loginError').textContent = 'Esta cuenta no tiene acceso a esta bitácora.';
@@ -313,10 +390,19 @@ function listenToPurchases(uid){
     purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
     setSync('Sincronizado', false);
+    purgeExpiredTrash();
   }, (err)=>{
     setSync('Error de conexión', false);
     console.error(err);
   });
+}
+
+async function purgeExpiredTrash(){
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const expired = purchases.filter(p => p.trashed && p.trashedAt && new Date(p.trashedAt).getTime() < cutoff);
+  for(const p of expired){
+    await deleteDoc(doc(db, 'users', currentUid, 'purchases', p.id));
+  }
 }
 
 function setSync(text, saving){
@@ -338,12 +424,20 @@ function fmtDate(d){ if(!d) return '—'; const [y,m,day]=d.split('-'); return `
 function fmtMoney(n){ return Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'; }
 function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str || ''; return div.innerHTML; }
 
+function updateStoreSuggestions(){
+  const stores = [...new Set(purchases.map(p => (p.store || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('storesList').innerHTML = stores.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+}
+
 function render(){
-  const pendientes = purchases.filter(p=>!p.arrived).sort((a,b)=> (a.launchDate||'9999').localeCompare(b.launchDate||'9999'));
-  const historial = purchases.filter(p=>p.arrived).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
+  updateStoreSuggestions();
+  const pendientes = purchases.filter(p=>!p.arrived && !p.trashed).sort((a,b)=> (a.purchaseDate||'9999').localeCompare(b.purchaseDate||'9999'));
+  const historial = purchases.filter(p=>p.arrived && !p.trashed).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
+  const papelera = purchases.filter(p=>p.trashed).sort((a,b)=> (b.trashedAt||'').localeCompare(a.trashedAt||''));
 
   document.getElementById('countPendientes').textContent = pendientes.length;
   document.getElementById('countHistorial').textContent = historial.length;
+  document.getElementById('countPapelera').textContent = papelera.length;
 
   const totalPendiente = pendientes.reduce((s,p)=>s+Number(p.price||0),0);
   const totalHistorial = historial.reduce((s,p)=>s+Number(p.price||0),0);
@@ -355,14 +449,42 @@ function render(){
   `;
 
   const list = document.getElementById('list');
-  const data = currentTab === 'pendientes' ? pendientes : historial;
+  const data = currentTab === 'pendientes' ? pendientes : currentTab === 'historial' ? historial : papelera;
 
   if(data.length === 0){
-    list.innerHTML = `<div class="empty"><b>${currentTab==='pendientes' ? 'Nada en curso' : 'Historial vacío'}</b>${currentTab==='pendientes' ? 'Añade tu próxima reserva con el botón de arriba.' : 'Cuando marques algo como recibido, aparecerá aquí.'}</div>`;
+    const emptyMsg = currentTab==='pendientes' ? ['Nada en curso','Añade tu próxima reserva con el botón de arriba.']
+      : currentTab==='historial' ? ['Historial vacío','Cuando marques algo como recibido, aparecerá aquí.']
+      : ['Papelera vacía','Lo que elimines aparecerá aquí durante 30 días antes de borrarse para siempre.'];
+    list.innerHTML = `<div class="empty"><b>${emptyMsg[0]}</b>${emptyMsg[1]}</div>`;
     return;
   }
 
-  list.innerHTML = data.map(p => `
+  list.innerHTML = data.map(p => {
+    if(currentTab === 'papelera'){
+      const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(p.trashedAt).getTime()) / 86400000));
+      return `
+        <div class="card trashed">
+          ${p.image ? `<img class="porthole" src="${escapeHtml(p.image)}" alt="">` : `<div class="porthole empty">🏴‍☠️</div>`}
+          <div class="card-body">
+            <div class="card-top">
+              <div>
+                <div class="card-name">${escapeHtml(p.name)}</div>
+                <div class="card-meta">
+                  <span>🏬 <b>${escapeHtml(p.store || '—')}</b></span>
+                  <span class="badge trash-badge">Se borra en ${daysLeft} día${daysLeft===1?'':'s'}</span>
+                </div>
+              </div>
+              <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-mini btn-arrived" data-action="restore" data-id="${p.id}">↺ Restaurar</button>
+              <button class="btn-mini btn-del" data-action="purge" data-id="${p.id}">✕ Eliminar definitivamente</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    return `
     <div class="card ${p.arrived ? 'done' : ''}">
       ${p.arrived ? `<div class="stamp">RECIBIDO</div>` : ''}
       ${p.image ? `<img class="porthole" src="${escapeHtml(p.image)}" alt="">` : `<div class="porthole empty">🏴‍☠️</div>`}
@@ -373,8 +495,8 @@ function render(){
             <div class="card-meta">
               <span>🏬 <b>${escapeHtml(p.store || '—')}</b></span>
               <span>📦 <b>${p.units || 1}</b> ud.</span>
-              <span>🚀 <b>${fmtDate(p.launchDate)}</b></span>
-              <span>🗓 <b>${fmtDate(p.purchaseDate)}</b></span>
+              <span>🗓 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
+              <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
               <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}</span>
             </div>
           </div>
@@ -383,20 +505,29 @@ function render(){
         <div class="card-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
-          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">✕ Eliminar</button>
+          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /* ---- Modal ---- */
 const backdrop = document.getElementById('modalBackdrop');
-const imgPreview = document.getElementById('imgPreview');
 
 function updatePreview(){
-  if(pendingImage){ imgPreview.src = pendingImage; imgPreview.classList.remove('empty'); }
-  else{ imgPreview.removeAttribute('src'); imgPreview.classList.add('empty'); }
+  const img = document.getElementById('imgPreview');
+  const icon = document.getElementById('imgPreviewIcon');
+  if(pendingImage){
+    img.src = pendingImage;
+    img.classList.add('has-img');
+    icon.classList.add('hidden');
+  }else{
+    img.removeAttribute('src');
+    img.classList.remove('has-img');
+    icon.classList.remove('hidden');
+  }
 }
 function openModal(item){
   editingId = item ? item.id : null;
@@ -472,7 +603,11 @@ document.getElementById('list').addEventListener('click', async (e)=>{
   } else if(action === 'edit'){
     openModal(item);
   } else if(action === 'delete'){
-    if(!confirm(`¿Eliminar "${item.name}" de la lista?`)) return;
+    await saveItem(id, { ...item, trashed:true, trashedAt: new Date().toISOString() });
+  } else if(action === 'restore'){
+    await saveItem(id, { ...item, trashed:false, trashedAt:null });
+  } else if(action === 'purge'){
+    if(!confirm(`Esto borrará "${item.name}" para siempre y no se podrá recuperar. ¿Continuar?`)) return;
     await deleteItem(id);
   }
 });
