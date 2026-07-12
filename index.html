@@ -159,7 +159,16 @@
   .btn-primary:disabled{opacity:.6;cursor:default;}
   .btn-ghost{background:none;color:var(--ink-mute);border:1px solid var(--line);}
 
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+
+  .view-toggle{display:flex;border:1px solid var(--pill-border);border-radius:6px;overflow:hidden;}
+  .view-btn{
+    font-size:15px;padding:8px 12px;background:var(--pill-bg-grad);border:none;color:var(--text-muted);cursor:pointer;
+  }
+  .view-btn.active{background:var(--toggle-bg);color:var(--brass-light);}
+  .view-btn + .view-btn{border-left:1px solid var(--pill-border);}
+
+  .stack-list{display:flex;flex-direction:column;gap:12px;}
 
   .mode-switch{display:flex;justify-content:center;gap:8px;margin:18px 0 22px;}
   .mode-btn{
@@ -173,7 +182,7 @@
   .wish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
   .wish-card{
     background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;
-    box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative;
   }
   .wish-img{width:100%;height:140px;object-fit:cover;background:linear-gradient(160deg,#dbe9ea,#b9d2d4);}
   .wish-img-empty{
@@ -276,6 +285,18 @@
   .empty b{display:block;color:var(--brass-light);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:6px;}
 
   .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;gap:16px;align-items:center;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .2s;}
+  .card.draggable-mode{cursor:grab;}
+  .card.dragging{opacity:.35;}
+  .card.drag-over{outline:2px dashed var(--brass);outline-offset:2px;}
+  .drag-handle{font-size:16px;color:var(--ink-mute);margin-right:2px;user-select:none;}
+  .wish-card.draggable-mode{cursor:grab;}
+  .wish-card.dragging{opacity:.35;}
+  .wish-card.drag-over{outline:2px dashed var(--brass);outline-offset:2px;}
+  .wish-drag-handle{
+    position:absolute;top:6px;left:6px;z-index:2;width:24px;height:24px;border-radius:50%;
+    background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:14px;user-select:none;
+  }
   .card.done{opacity:.78;}
   .porthole{width:64px;height:64px;border-radius:50%;flex-shrink:0;object-fit:cover;border:3px solid var(--brass);box-shadow:0 0 0 1px #7a5d20 inset, inset 0 0 10px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.3);background:linear-gradient(160deg,#dbe9ea,#b9d2d4);}
   .porthole.empty{display:flex;align-items:center;justify-content:center;font-size:22px;}
@@ -429,6 +450,18 @@
     <select class="filter-select" id="filterStore">
       <option value="all">Todas las tiendas</option>
     </select>
+    <select class="filter-select" id="sortMode">
+      <option value="launch">🚀 Lanzamiento (antes lo próximo)</option>
+      <option value="purchase">🛒 Fecha de compra</option>
+      <option value="price-asc">€ Precio (menor primero)</option>
+      <option value="price-desc">€ Precio (mayor primero)</option>
+      <option value="name">A-Z Nombre</option>
+      <option value="custom">✋ Personalizado (arrastrar)</option>
+    </select>
+    <div class="view-toggle">
+      <button class="view-btn active" id="viewListBtn" title="Vista de listado">☰</button>
+      <button class="view-btn" id="viewGridBtn" title="Vista de tarjetas">▦</button>
+    </div>
   </div>
 
   <div id="list"></div>
@@ -439,6 +472,17 @@
     <div class="wishlist-toolbar">
       <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
       <button class="stats-btn" id="btnRegenWishlist" title="Invalida el enlace anterior y crea uno nuevo">🔄 Regenerar enlace</button>
+      <select class="filter-select" id="wishSortMode">
+        <option value="recent">🕐 Añadido recientemente</option>
+        <option value="price-asc">€ Precio (menor primero)</option>
+        <option value="price-desc">€ Precio (mayor primero)</option>
+        <option value="name">A-Z Nombre</option>
+        <option value="custom">✋ Personalizado (arrastrar)</option>
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn" id="wishViewListBtn" title="Vista de listado">☰</button>
+        <button class="view-btn active" id="wishViewGridBtn" title="Vista de tarjetas">▦</button>
+      </div>
       <button class="fab" id="btnOpenAddWish" disabled>⏳ Preparando wishlist...</button>
     </div>
     <div id="wishlistList"></div>
@@ -588,6 +632,11 @@ let filterDelivery = 'all';
 let filterMonth = 'all';
 let filterYear = 'all';
 let filterStore = 'all';
+let sortMode = 'launch';
+let wishSortMode = 'recent';
+let draggedId = null;
+let comprasViewMode = localStorage.getItem('compras-view') || 'list';
+let wishlistViewMode = localStorage.getItem('wishlist-view') || 'grid';
 let selectedYear = new Date().getFullYear();
 const MONTHLY_BUDGET = 200;
 
@@ -772,9 +821,10 @@ function listenPublicWishlist(token){
   });
 }
 
-function buildWishCardHtml(item, showActions){
+function buildWishCardHtml(item, showActions, draggable){
   return `
-    <div class="wish-card">
+    <div class="wish-card ${draggable ? 'draggable-mode' : ''}" ${draggable ? `draggable="true" data-drag-id="${item.id}"` : ''}>
+      ${draggable ? `<span class="wish-drag-handle">⠿</span>` : ''}
       ${item.image ? `<img class="wish-img" src="${escapeHtml(item.image)}" alt="">` : `<div class="wish-img-empty">🎁</div>`}
       <div class="wish-body">
         <div class="wish-name">${escapeHtml(item.name)}</div>
@@ -792,14 +842,94 @@ function buildWishCardHtml(item, showActions){
   `;
 }
 
+const wishSortComparators = {
+  recent: (a,b) => (b.createdAt||'').localeCompare(a.createdAt||''),
+  'price-asc': (a,b) => Number(a.price||0) - Number(b.price||0),
+  'price-desc': (a,b) => Number(b.price||0) - Number(a.price||0),
+  name: (a,b) => (a.name||'').localeCompare(b.name||''),
+  custom: (a,b) => (a.order||0) - (b.order||0),
+};
+
+function attachDragHandlers(container, itemsArray, saveFn){
+  const cards = container.querySelectorAll('[data-drag-id]');
+  cards.forEach(card => {
+    card.addEventListener('dragstart', ()=>{
+      draggedId = card.dataset.dragId;
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', ()=>{
+      card.classList.remove('dragging');
+      container.querySelectorAll('[data-drag-id]').forEach(c=>c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      if(card.dataset.dragId !== draggedId) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', ()=> card.classList.remove('drag-over'));
+    card.addEventListener('drop', async (e)=>{
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const targetId = card.dataset.dragId;
+      if(!draggedId || draggedId === targetId) return;
+
+      const ids = Array.from(container.querySelectorAll('[data-drag-id]')).map(c=>c.dataset.dragId);
+      const fromIdx = ids.indexOf(draggedId);
+      const toIdx = ids.indexOf(targetId);
+      if(fromIdx === -1 || toIdx === -1) return;
+      ids.splice(fromIdx, 1);
+      ids.splice(toIdx, 0, draggedId);
+
+      const saves = ids.map((id, idx) => {
+        const item = itemsArray.find(x => x.id === id);
+        if(!item) return Promise.resolve();
+        const { id: _skip, ...rest } = item;
+        return saveFn(id, { ...rest, order: idx * 10 });
+      });
+      draggedId = null;
+      await Promise.all(saves);
+    });
+  });
+}
+
+function buildWishListRowHtml(item, draggable){
+  return `
+    <div class="card ${draggable ? 'draggable-mode' : ''}" ${draggable ? `draggable="true" data-drag-id="${item.id}"` : ''}>
+      ${draggable ? `<span class="drag-handle">⠿</span>` : ''}
+      ${item.image ? `<img class="porthole" src="${escapeHtml(item.image)}" alt="">` : `<div class="porthole empty">🎁</div>`}
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${escapeHtml(item.name)}</div>
+            <div class="card-meta">
+              ${item.notes ? `<span>${escapeHtml(item.notes)}</span>` : ''}
+              ${item.url ? `<a class="wish-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Ver producto ↗</a>` : ''}
+            </div>
+          </div>
+          <div class="price"><b>${fmtMoney(item.price)}</b><small>aprox.</small></div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
+          <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderWishlist(){
   const list = document.getElementById('wishlistList');
   if(wishlistItems.length === 0){
     list.innerHTML = `<div class="empty"><b>Tu wishlist está vacía</b>Añade cosas que te gustaría comprar más adelante.</div>`;
     return;
   }
-  const sorted = [...wishlistItems].sort((a,b)=> (b.createdAt||'').localeCompare(a.createdAt||''));
-  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, true)).join('')}</div>`;
+  const sorted = [...wishlistItems].sort(wishSortComparators[wishSortMode] || wishSortComparators.recent);
+  const draggable = wishSortMode === 'custom';
+  if(wishlistViewMode === 'list'){
+    list.innerHTML = `<div class="stack-list">${sorted.map(item => buildWishListRowHtml(item, draggable)).join('')}</div>`;
+  } else {
+    list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, true, draggable)).join('')}</div>`;
+  }
+  if(draggable) attachDragHandlers(list, wishlistItems, saveWishItem);
 }
 
 function renderPublicWishlist(items){
@@ -808,8 +938,8 @@ function renderPublicWishlist(items){
     list.innerHTML = `<div class="empty"><b>Wishlist vacía</b>Todavía no hay nada apuntado aquí.</div>`;
     return;
   }
-  const sorted = [...items].sort((a,b)=> (b.createdAt||'').localeCompare(a.createdAt||''));
-  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, false)).join('')}</div>`;
+  const sorted = [...items].sort((a,b)=> (a.order||0) - (b.order||0) || (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, false, false)).join('')}</div>`;
 }
 
 function setSync(text, saving){
@@ -924,7 +1054,15 @@ function updateFilterOptions(){
 function render(){
   updateStoreSuggestions();
   updateFilterOptions();
-  const pendientes = purchases.filter(p=>!p.arrived && !p.trashed).sort((a,b)=> (a.purchaseDate||'9999').localeCompare(b.purchaseDate||'9999'));
+  const sortComparators = {
+    launch: (a,b) => (a.launchDate||'9999').localeCompare(b.launchDate||'9999'),
+    purchase: (a,b) => (a.purchaseDate||'9999').localeCompare(b.purchaseDate||'9999'),
+    'price-asc': (a,b) => Number(a.price||0) - Number(b.price||0),
+    'price-desc': (a,b) => Number(b.price||0) - Number(a.price||0),
+    name: (a,b) => (a.name||'').localeCompare(b.name||''),
+    custom: (a,b) => (a.order||0) - (b.order||0),
+  };
+  const pendientes = purchases.filter(p=>!p.arrived && !p.trashed).sort(sortComparators[sortMode] || sortComparators.launch);
   const historial = purchases.filter(p=>p.arrived && !p.trashed).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
   const papelera = purchases.filter(p=>p.trashed).sort((a,b)=> (b.trashedAt||'').localeCompare(a.trashedAt||''));
 
@@ -975,8 +1113,10 @@ function render(){
     return;
   }
 
-  list.innerHTML = data.map(p => {
-    if(currentTab === 'papelera'){
+  const isDraggable = currentTab === 'pendientes' && sortMode === 'custom';
+
+  if(currentTab === 'papelera'){
+    list.innerHTML = `<div class="stack-list">${data.map(p => {
       const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(p.trashedAt).getTime()) / 86400000));
       return `
         <div class="card trashed">
@@ -999,10 +1139,24 @@ function render(){
           </div>
         </div>
       `;
-    }
-    return `
-    <div class="card ${p.arrived ? 'done' : ''}">
+    }).join('')}</div>`;
+    return;
+  }
+
+  if(comprasViewMode === 'grid'){
+    list.innerHTML = `<div class="wish-grid">${data.map(p => buildPurchaseGridHtml(p, isDraggable)).join('')}</div>`;
+  } else {
+    list.innerHTML = `<div class="stack-list">${data.map(p => buildPurchaseRowHtml(p, isDraggable)).join('')}</div>`;
+  }
+
+  if(isDraggable) attachDragHandlers(list, pendientes, saveItem);
+}
+
+function buildPurchaseRowHtml(p, isDraggable){
+  return `
+    <div class="card ${p.arrived ? 'done' : ''} ${isDraggable ? 'draggable-mode' : ''}" ${isDraggable ? `draggable="true" data-drag-id="${p.id}"` : ''}>
       ${p.arrived ? `<div class="stamp">RECIBIDO</div>` : ''}
+      ${isDraggable ? `<span class="drag-handle">⠿</span>` : ''}
       ${p.image ? `<img class="porthole" src="${escapeHtml(p.image)}" alt="">` : `<div class="porthole empty">🏴‍☠️</div>`}
       <div class="card-body">
         <div class="card-top">
@@ -1026,7 +1180,27 @@ function render(){
       </div>
     </div>
   `;
-  }).join('');
+}
+
+function buildPurchaseGridHtml(p, isDraggable){
+  return `
+    <div class="wish-card ${isDraggable ? 'draggable-mode' : ''}" ${isDraggable ? `draggable="true" data-drag-id="${p.id}"` : ''}>
+      ${p.arrived ? `<div class="stamp">RECIBIDO</div>` : ''}
+      ${isDraggable ? `<span class="wish-drag-handle">⠿</span>` : ''}
+      ${p.image ? `<img class="wish-img" src="${escapeHtml(p.image)}" alt="">` : `<div class="wish-img-empty">🏴‍☠️</div>`}
+      <div class="wish-body">
+        <div class="wish-name">${escapeHtml(p.name)}</div>
+        <div class="wish-price">${fmtMoney(p.price)}</div>
+        <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
+        <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
+        <div class="wish-actions">
+          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
+          <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 /* ---- Modal ---- */
@@ -1100,7 +1274,8 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
     delivery: document.querySelector('input[name=f-entrega]:checked').value,
     image: pendingImage,
     arrived: false,
-    arrivedAt: null
+    arrivedAt: null,
+    order: Date.now()
   };
 
   const id = editingId || uid();
@@ -1108,6 +1283,7 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
     const existing = purchases.find(p=>p.id===editingId);
     payload.arrived = existing.arrived;
     payload.arrivedAt = existing.arrivedAt;
+    payload.order = existing.order ?? payload.order;
   }
   await saveItem(id, payload);
   closeModal();
@@ -1155,6 +1331,10 @@ document.getElementById('filterYear').addEventListener('change', (e)=>{
 });
 document.getElementById('filterStore').addEventListener('change', (e)=>{
   filterStore = e.target.value;
+  render();
+});
+document.getElementById('sortMode').addEventListener('change', (e)=>{
+  sortMode = e.target.value;
   render();
 });
 
@@ -1370,6 +1550,34 @@ function openWishModal(item){
 function closeWishModal(){ wishBackdrop.classList.remove('open'); editingWishId = null; pendingWishImage = ''; }
 
 document.getElementById('btnOpenAddWish').addEventListener('click', ()=>openWishModal(null));
+document.getElementById('wishSortMode').addEventListener('change', (e)=>{
+  wishSortMode = e.target.value;
+  renderWishlist();
+});
+
+/* ---- Interruptores de vista: listado / tarjetas ---- */
+function setView(mode, storageKey, listBtnId, gridBtnId, setter, renderFn){
+  setter(mode);
+  localStorage.setItem(storageKey, mode);
+  document.getElementById(listBtnId).classList.toggle('active', mode === 'list');
+  document.getElementById(gridBtnId).classList.toggle('active', mode === 'grid');
+  renderFn();
+}
+document.getElementById('viewListBtn').addEventListener('click', ()=>
+  setView('list', 'compras-view', 'viewListBtn', 'viewGridBtn', v=>comprasViewMode=v, render));
+document.getElementById('viewGridBtn').addEventListener('click', ()=>
+  setView('grid', 'compras-view', 'viewListBtn', 'viewGridBtn', v=>comprasViewMode=v, render));
+document.getElementById('wishViewListBtn').addEventListener('click', ()=>
+  setView('list', 'wishlist-view', 'wishViewListBtn', 'wishViewGridBtn', v=>wishlistViewMode=v, renderWishlist));
+document.getElementById('wishViewGridBtn').addEventListener('click', ()=>
+  setView('grid', 'wishlist-view', 'wishViewListBtn', 'wishViewGridBtn', v=>wishlistViewMode=v, renderWishlist));
+
+// Reflejar el estado guardado (localStorage) en los botones al cargar
+document.getElementById('viewListBtn').classList.toggle('active', comprasViewMode === 'list');
+document.getElementById('viewGridBtn').classList.toggle('active', comprasViewMode === 'grid');
+document.getElementById('wishViewListBtn').classList.toggle('active', wishlistViewMode === 'list');
+document.getElementById('wishViewGridBtn').classList.toggle('active', wishlistViewMode === 'grid');
+
 document.getElementById('wishModalClose').addEventListener('click', closeWishModal);
 document.getElementById('wBtnCancel').addEventListener('click', closeWishModal);
 // (El modal de wishlist ya no se cierra al hacer clic fuera, solo con la X o "Cancelar")
@@ -1402,7 +1610,8 @@ document.getElementById('wBtnSave').addEventListener('click', async ()=>{
     url: document.getElementById('w-url').value.trim(),
     notes: document.getElementById('w-notas').value.trim(),
     image: pendingWishImage,
-    createdAt: editingWishId ? (wishlistItems.find(w=>w.id===editingWishId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+    createdAt: editingWishId ? (wishlistItems.find(w=>w.id===editingWishId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    order: editingWishId ? (wishlistItems.find(w=>w.id===editingWishId)?.order ?? Date.now()) : Date.now()
   };
 
   const id = editingWishId || uid();
