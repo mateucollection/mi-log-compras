@@ -179,7 +179,7 @@
   .mode-btn.active{color:var(--brass-light);border-color:var(--brass);background:var(--toggle-bg);}
 
   .wishlist-toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:18px;}
-  .wish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .wish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:14px;}
   .wish-card{
     background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;
     box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative;
@@ -197,10 +197,37 @@
     font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
     color:var(--teal);text-decoration:none;margin-top:2px;
   }
-  .wish-actions{display:flex;gap:8px;margin-top:auto;padding-top:8px;}
+  .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:auto;padding-top:8px;}
+  .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
   #publicWishlistScreen{display:none;}
   #publicWishlistScreen.visible{display:block;}
+
+  /* ---- Impresión / Exportar a PDF ---- */
+  .print-only{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #printWishlist, #printWishlist *{visibility:visible;}
+    #printWishlist{
+      display:block !important;
+      position:absolute;top:0;left:0;width:100%;
+      background:#fff;color:#222;padding:0;
+      font-family:'Zilla Slab', serif;
+    }
+    #printWishlist h1{
+      font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.03em;
+      color:#222;border-bottom:2px solid #c89b3c;padding-bottom:10px;margin-bottom:20px;
+    }
+    .print-item{
+      display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #ddd;
+      break-inside:avoid;page-break-inside:avoid;
+    }
+    .print-item img{width:80px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0;}
+    .print-item-body h3{margin:0 0 4px;font-size:16px;font-family:'Bebas Neue',sans-serif;letter-spacing:.02em;color:#222;}
+    .print-item-body p{margin:2px 0;font-size:12.5px;color:#444;}
+    .print-item-body .print-price{font-weight:700;color:#a5332a;}
+    .print-item-body a{color:#276e6a;word-break:break-all;}
+  }
   .search-input{
     flex:1;min-width:180px;font-family:'Zilla Slab',serif;font-size:14px;
     padding:9px 12px;border:1px solid var(--pill-border);border-radius:6px;
@@ -471,6 +498,7 @@
   <div id="wishlistSection" style="display:none;">
     <div class="wishlist-toolbar">
       <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
+      <button class="stats-btn" id="btnExportPdf">📄 Exportar a PDF</button>
       <button class="stats-btn" id="btnRegenWishlist" title="Invalida el enlace anterior y crea uno nuevo">🔄 Regenerar enlace</button>
       <select class="filter-select" id="wishSortMode">
         <option value="recent">🕐 Añadido recientemente</option>
@@ -573,6 +601,12 @@
   </div>
 </div>
 
+<!-- CONTENEDOR SOLO PARA IMPRESIÓN/EXPORTAR A PDF -->
+<div id="printWishlist" class="print-only">
+  <h1>🎁 Mi Wishlist</h1>
+  <div id="printWishlistItems"></div>
+</div>
+
 <!-- PUBLIC READ-ONLY WISHLIST VIEW -->
 <div id="publicWishlistScreen">
   <div class="wrap">
@@ -580,6 +614,9 @@
       <div class="eyebrow">Lista de deseos compartida</div>
       <h1>🎁 <span>WISHLIST</span></h1>
       <div class="sub">Esto es lo que le haría ilusión recibir — puedes verlo, pero no editarlo.</div>
+      <div style="text-align:center;margin-top:14px;">
+        <button class="stats-btn" id="btnExportPdfPublic">📄 Exportar a PDF</button>
+      </div>
     </header>
     <div id="publicWishlistList"></div>
     <footer>Vista pública de solo lectura</footer>
@@ -920,6 +957,7 @@ function renderWishlist(){
   const list = document.getElementById('wishlistList');
   if(wishlistItems.length === 0){
     list.innerHTML = `<div class="empty"><b>Tu wishlist está vacía</b>Añade cosas que te gustaría comprar más adelante.</div>`;
+    renderPrintWishlist([]);
     return;
   }
   const sorted = [...wishlistItems].sort(wishSortComparators[wishSortMode] || wishSortComparators.recent);
@@ -930,16 +968,39 @@ function renderWishlist(){
     list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, true, draggable)).join('')}</div>`;
   }
   if(draggable) attachDragHandlers(list, wishlistItems, saveWishItem);
+  renderPrintWishlist(sorted);
+}
+
+function renderPrintWishlist(items){
+  const container = document.getElementById('printWishlistItems');
+  if(!container) return;
+  if(items.length === 0){
+    container.innerHTML = `<p>Tu wishlist está vacía.</p>`;
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="print-item">
+      ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : ''}
+      <div class="print-item-body">
+        <h3>${escapeHtml(item.name)}</h3>
+        ${item.price ? `<p class="print-price">${fmtMoney(item.price)}</p>` : ''}
+        ${item.notes ? `<p>${escapeHtml(item.notes)}</p>` : ''}
+        ${item.url ? `<p><a href="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a></p>` : ''}
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderPublicWishlist(items){
   const list = document.getElementById('publicWishlistList');
   if(items.length === 0){
     list.innerHTML = `<div class="empty"><b>Wishlist vacía</b>Todavía no hay nada apuntado aquí.</div>`;
+    renderPrintWishlist([]);
     return;
   }
   const sorted = [...items].sort((a,b)=> (a.order||0) - (b.order||0) || (b.createdAt||'').localeCompare(a.createdAt||''));
   list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, false, false)).join('')}</div>`;
+  renderPrintWishlist(sorted);
 }
 
 function setSync(text, saving){
@@ -1500,6 +1561,13 @@ document.getElementById('btnShareWishlist').addEventListener('click', async ()=>
     prompt('Copia este enlace para compartir tu wishlist:', url);
   }
   setTimeout(()=>{ btn.textContent = original; }, 2500);
+});
+
+document.getElementById('btnExportPdf').addEventListener('click', ()=>{
+  window.print();
+});
+document.getElementById('btnExportPdfPublic').addEventListener('click', ()=>{
+  window.print();
 });
 
 document.getElementById('btnRegenWishlist').addEventListener('click', async ()=>{
