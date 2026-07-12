@@ -200,9 +200,6 @@
   .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:auto;padding-top:8px;}
   .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
-  #publicWishlistScreen{display:none;}
-  #publicWishlistScreen.visible{display:block;}
-
   /* ---- Impresión / Exportar a PDF ---- */
   .print-only{display:none;}
   @media print{
@@ -497,9 +494,7 @@
 
   <div id="wishlistSection" style="display:none;">
     <div class="wishlist-toolbar">
-      <button class="stats-btn" id="btnShareWishlist">🔗 Copiar enlace para compartir</button>
       <button class="stats-btn" id="btnExportPdf">📄 Exportar a PDF</button>
-      <button class="stats-btn" id="btnRegenWishlist" title="Invalida el enlace anterior y crea uno nuevo">🔄 Regenerar enlace</button>
       <select class="filter-select" id="wishSortMode">
         <option value="recent">🕐 Añadido recientemente</option>
         <option value="price-asc">€ Precio (menor primero)</option>
@@ -511,7 +506,7 @@
         <button class="view-btn" id="wishViewListBtn" title="Vista de listado">☰</button>
         <button class="view-btn active" id="wishViewGridBtn" title="Vista de tarjetas">▦</button>
       </div>
-      <button class="fab" id="btnOpenAddWish" disabled>⏳ Preparando wishlist...</button>
+      <button class="fab" id="btnOpenAddWish">+ Añadir a la wishlist</button>
     </div>
     <div id="wishlistList"></div>
   </div>
@@ -607,22 +602,6 @@
   <div id="printWishlistItems"></div>
 </div>
 
-<!-- PUBLIC READ-ONLY WISHLIST VIEW -->
-<div id="publicWishlistScreen">
-  <div class="wrap">
-    <header>
-      <div class="eyebrow">Lista de deseos compartida</div>
-      <h1>🎁 <span>WISHLIST</span></h1>
-      <div class="sub">Esto es lo que le haría ilusión recibir — puedes verlo, pero no editarlo.</div>
-      <div style="text-align:center;margin-top:14px;">
-        <button class="stats-btn" id="btnExportPdfPublic">📄 Exportar a PDF</button>
-      </div>
-    </header>
-    <div id="publicWishlistList"></div>
-    <footer>Vista pública de solo lectura</footer>
-  </div>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-check.js";
@@ -630,7 +609,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, getDocs, writeBatch
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // --- Tu configuración de Firebase ---
@@ -654,10 +633,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const urlParams = new URLSearchParams(location.search);
-const sharedWishlistToken = urlParams.get('wishlist');
-const isPublicView = !!sharedWishlistToken;
-
 let purchases = [];
 let currentTab = 'pendientes';
 let editingId = null;
@@ -679,11 +654,9 @@ const MONTHLY_BUDGET = 200;
 
 let wishlistItems = [];
 let unsubscribeWishSnapshot = null;
-let unsubscribePublicWishSnapshot = null;
 let editingWishId = null;
 let pendingWishImage = '';
 let appMode = 'compras';
-let wishlistToken = null;
 
 /* ---- Theme (light/dark) ---- */
 const themeToggle = document.getElementById('themeToggle');
@@ -711,8 +684,7 @@ document.getElementById('btnGoogleLogin').addEventListener('click', async ()=>{
 });
 document.getElementById('btnLogout').addEventListener('click', ()=> signOut(auth));
 
-onAuthStateChanged(auth, (user)=>{
-  if(isPublicView) return; // en la vista pública compartida no gestionamos sesión
+onAuthStateChanged(auth, async (user)=>{
   if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
   if(unsubscribeWishSnapshot){ unsubscribeWishSnapshot(); unsubscribeWishSnapshot = null; }
 
@@ -722,7 +694,8 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById('appScreen').classList.add('visible');
     document.getElementById('userPhoto').src = user.photoURL || '';
     listenToPurchases(user.uid);
-    ensureWishlistToken(user.uid);
+    await migrateOldWishlist(user.uid);
+    listenToWishlist(user.uid);
   } else {
     currentUid = null;
     document.getElementById('appScreen').classList.remove('visible');
@@ -759,103 +732,50 @@ async function purgeExpiredTrash(){
   }
 }
 
-/* ---- Wishlist: gestión privada (dueño), basada en un token regenerable ---- */
-function randomToken(){
-  if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID().replace(/-/g,'');
-  return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-}
-
-async function ensureWishlistToken(uid){
-  const addBtn = document.getElementById('btnOpenAddWish');
-  addBtn.disabled = true;
-  addBtn.textContent = '⏳ Preparando wishlist...';
+/* ---- Wishlist: gestión privada (dueño), datos ligados a tu cuenta como el resto de la app ---- */
+/* ---- Migración única: recupera deseos guardados con el antiguo sistema de enlace/token ---- */
+async function migrateOldWishlist(uid){
   try{
-    const ref = doc(db, 'users', uid, 'settings', 'wishlistToken');
-    const snap = await getDoc(ref);
-    if(snap.exists() && snap.data().token){
-      wishlistToken = snap.data().token;
-    } else {
-      wishlistToken = randomToken();
-      await setDoc(ref, { token: wishlistToken });
+    const tokenRef = doc(db, 'users', uid, 'settings', 'wishlistToken');
+    const tokenSnap = await getDoc(tokenRef);
+    if(!tokenSnap.exists() || !tokenSnap.data().token) return; // no había nada del sistema antiguo
+
+    const oldToken = tokenSnap.data().token;
+    const oldColRef = collection(db, 'wishlists', oldToken, 'items');
+    const oldSnap = await getDocs(oldColRef);
+
+    for(const d of oldSnap.docs){
+      await setDoc(doc(db, 'users', uid, 'wishlist', d.id), d.data());
     }
-    listenToWishlist(wishlistToken);
+    for(const d of oldSnap.docs){
+      await deleteDoc(doc(db, 'wishlists', oldToken, 'items', d.id));
+    }
+    await deleteDoc(tokenRef);
+
+    if(oldSnap.docs.length > 0){
+      console.log(`Wishlist migrada: ${oldSnap.docs.length} deseo(s) recuperado(s) del sistema antiguo.`);
+    }
   }catch(e){
-    console.error('No se pudo preparar la wishlist:', e);
-    document.getElementById('wishlistList').innerHTML = `<div class="empty"><b>No se pudo cargar la wishlist</b>Revisa que las reglas de Firestore incluyan el bloque "settings". Detalle: ${e.code || e.message}</div>`;
-  } finally {
-    addBtn.disabled = false;
-    addBtn.textContent = '+ Añadir a la wishlist';
+    console.error('No se pudo migrar la wishlist antigua (revisa que las reglas de Firestore aún incluyan "settings" y "wishlists"):', e);
   }
 }
 
-function listenToWishlist(token){
-  if(unsubscribeWishSnapshot){ unsubscribeWishSnapshot(); unsubscribeWishSnapshot = null; }
-  const colRef = collection(db, 'wishlists', token, 'items');
+function listenToWishlist(uid){
+  const colRef = collection(db, 'users', uid, 'wishlist');
   unsubscribeWishSnapshot = onSnapshot(colRef, (snap)=>{
     wishlistItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderWishlist();
   }, (err)=>{
-    console.error(err);
+    console.error('No se pudo cargar la wishlist:', err);
+    document.getElementById('wishlistList').innerHTML = `<div class="empty"><b>No se pudo cargar la wishlist</b>Revisa que las reglas de Firestore incluyan el bloque "wishlist". Detalle: ${err.code || err.message}</div>`;
   });
 }
 
 async function saveWishItem(id, data){
-  await setDoc(doc(db, 'wishlists', wishlistToken, 'items', id), data);
+  await setDoc(doc(db, 'users', currentUid, 'wishlist', id), data);
 }
 async function deleteWishItem(id){
-  await deleteDoc(doc(db, 'wishlists', wishlistToken, 'items', id));
-}
-
-async function regenerateWishlistLink(){
-  const oldToken = wishlistToken;
-  const newToken = randomToken();
-
-  const oldColRef = collection(db, 'wishlists', oldToken, 'items');
-  const snap = await getDocs(oldColRef);
-
-  // Paso crítico: copiar los deseos al token nuevo Y apuntar el puntero ahí,
-  // todo en UNA sola operación atómica (o se aplica entero, o no se aplica nada).
-  // Así, si algo falla a mitad, el enlace antiguo sigue funcionando con normalidad
-  // en vez de quedarse en un estado a medias.
-  const batch = writeBatch(db);
-  snap.docs.forEach(d => {
-    batch.set(doc(db, 'wishlists', newToken, 'items', d.id), d.data());
-  });
-  batch.set(doc(db, 'users', currentUid, 'settings', 'wishlistToken'), { token: newToken });
-  await batch.commit();
-
-  // A partir de aquí, el enlace nuevo ya es 100% funcional y es la fuente de verdad.
-  // Lo que queda es solo limpieza: borrar los datos del token viejo para que
-  // ese enlace deje de mostrar nada. Si algo de esto fallara, no hay pérdida de
-  // datos ni enlaces rotos, como mucho el enlace viejo tardaría en "vaciarse".
-  wishlistToken = newToken;
-  listenToWishlist(newToken);
-
-  const failedDeletes = [];
-  for(const d of snap.docs){
-    try{
-      await deleteDoc(doc(db, 'wishlists', oldToken, 'items', d.id));
-    }catch(e){
-      failedDeletes.push(d.id);
-    }
-  }
-  if(failedDeletes.length > 0){
-    console.warn('No se pudieron limpiar todos los datos del enlace antiguo:', failedDeletes);
-    return { cleanupWarning: true };
-  }
-  return { cleanupWarning: false };
-}
-
-/* ---- Wishlist: vista pública (solo lectura, sin sesión) ---- */
-function listenPublicWishlist(token){
-  const colRef = collection(db, 'wishlists', token, 'items');
-  unsubscribePublicWishSnapshot = onSnapshot(colRef, (snap)=>{
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderPublicWishlist(items);
-  }, (err)=>{
-    document.getElementById('publicWishlistList').innerHTML = `<div class="empty"><b>No se pudo cargar</b>Este enlace no es válido o la lista ya no está disponible.</div>`;
-    console.error(err);
-  });
+  await deleteDoc(doc(db, 'users', currentUid, 'wishlist', id));
 }
 
 function buildWishCardHtml(item, showActions, draggable){
@@ -991,17 +911,7 @@ function renderPrintWishlist(items){
   `).join('');
 }
 
-function renderPublicWishlist(items){
-  const list = document.getElementById('publicWishlistList');
-  if(items.length === 0){
-    list.innerHTML = `<div class="empty"><b>Wishlist vacía</b>Todavía no hay nada apuntado aquí.</div>`;
-    renderPrintWishlist([]);
-    return;
-  }
-  const sorted = [...items].sort((a,b)=> (a.order||0) - (b.order||0) || (b.createdAt||'').localeCompare(a.createdAt||''));
-  list.innerHTML = `<div class="wish-grid">${sorted.map(item => buildWishCardHtml(item, false, false)).join('')}</div>`;
-  renderPrintWishlist(sorted);
-}
+
 
 function setSync(text, saving){
   document.getElementById('syncText').textContent = text;
@@ -1549,41 +1459,8 @@ document.getElementById('modeWishlist').addEventListener('click', ()=>{
   document.getElementById('comprasSection').style.display = 'none';
 });
 
-/* ---- Compartir wishlist ---- */
-document.getElementById('btnShareWishlist').addEventListener('click', async ()=>{
-  const url = `${location.origin}${location.pathname}?wishlist=${wishlistToken}`;
-  const btn = document.getElementById('btnShareWishlist');
-  const original = btn.textContent;
-  try{
-    await navigator.clipboard.writeText(url);
-    btn.textContent = '✔ Enlace copiado';
-  }catch(e){
-    prompt('Copia este enlace para compartir tu wishlist:', url);
-  }
-  setTimeout(()=>{ btn.textContent = original; }, 2500);
-});
-
 document.getElementById('btnExportPdf').addEventListener('click', ()=>{
   window.print();
-});
-document.getElementById('btnExportPdfPublic').addEventListener('click', ()=>{
-  window.print();
-});
-
-document.getElementById('btnRegenWishlist').addEventListener('click', async ()=>{
-  if(!confirm('Esto crea un enlace nuevo y deja sin acceso al enlace anterior (quien lo tuviera ya no verá nada). ¿Continuar?')) return;
-  const btn = document.getElementById('btnRegenWishlist');
-  const original = btn.textContent;
-  btn.textContent = '⏳ Regenerando...';
-  btn.disabled = true;
-  try{
-    const result = await regenerateWishlistLink();
-    btn.textContent = result.cleanupWarning ? '✔ Enlace nuevo (revisa consola)' : '✔ Enlace regenerado';
-  }catch(e){
-    btn.textContent = '✕ Error, prueba de nuevo';
-    console.error(e);
-  }
-  setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 3000);
 });
 
 /* ---- Modal de wishlist ---- */
@@ -1714,14 +1591,6 @@ document.getElementById('wishlistList').addEventListener('click', async (e)=>{
     await deleteWishItem(id);
   }
 });
-
-/* ---- Arranque de la vista pública (enlace compartido, sin sesión) ---- */
-if(isPublicView){
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appScreen').classList.remove('visible');
-  document.getElementById('publicWishlistScreen').classList.add('visible');
-  listenPublicWishlist(sharedWishlistToken);
-}
 </script>
 </body>
 </html>
