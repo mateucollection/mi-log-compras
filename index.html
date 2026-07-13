@@ -202,6 +202,14 @@
   .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:auto;padding-top:8px;}
   .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
+  .launch-progress{margin-top:8px;}
+  .launch-progress-track{height:6px;border-radius:4px;background:var(--pill-border);overflow:hidden;}
+  .launch-progress-fill{height:100%;border-radius:4px;transition:width .3s ease;}
+  .launch-progress-fill.fill-red{background:var(--wax-red);}
+  .launch-progress-fill.fill-orange{background:var(--brass);}
+  .launch-progress-fill.fill-green{background:var(--teal);}
+  .launch-progress-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);margin-top:3px;}
+
   .search-input{
     flex:1;min-width:180px;font-family:'Zilla Slab',serif;font-size:14px;
     padding:9px 12px;border:1px solid var(--pill-border);border-radius:6px;
@@ -1080,6 +1088,38 @@ function render(){
   if(isDraggable) attachDragHandlers(list, pendientes, saveItem);
 }
 
+// Barra de proximidad al lanzamiento: roja si falta mucho, naranja a medio camino, verde si está cerca
+function buildLaunchProgressHtml(p){
+  if(!p.launchDate) return '';
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const launch = new Date(p.launchDate + 'T00:00:00');
+  const daysRemaining = Math.round((launch - today) / 86400000);
+
+  const HORIZON_DAYS = 180; // hasta 6 meses vista, para que el relleno tenga sentido en todo ese rango
+  let pct = Math.max(0, Math.min(100, 100 - (daysRemaining / HORIZON_DAYS) * 100));
+
+  let colorClass, label;
+  if(daysRemaining <= 0){
+    pct = 100;
+    colorClass = 'fill-green';
+    label = daysRemaining === 0 ? '¡Sale hoy!' : 'Ya debería estar disponible';
+  } else {
+    label = `Quedan ${daysRemaining} día${daysRemaining === 1 ? '' : 's'}`;
+    if(daysRemaining <= 60) colorClass = 'fill-green';
+    else if(daysRemaining <= 120) colorClass = 'fill-orange';
+    else colorClass = 'fill-red';
+  }
+
+  return `
+    <div class="launch-progress">
+      <div class="launch-progress-track"><div class="launch-progress-fill ${colorClass}" style="width:${pct}%"></div></div>
+      <div class="launch-progress-label">${label}</div>
+    </div>
+  `;
+}
+
 function buildPurchaseRowHtml(p, isDraggable){
   return `
     <div class="card ${p.arrived ? 'done' : ''} ${isDraggable ? 'draggable-mode' : ''}" ${isDraggable ? `draggable="true" data-drag-id="${p.id}"` : ''}>
@@ -1100,6 +1140,7 @@ function buildPurchaseRowHtml(p, isDraggable){
           </div>
           <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
         </div>
+        ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
@@ -1121,6 +1162,7 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-price">${fmtMoney(p.price)}</div>
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
+        ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="wish-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
