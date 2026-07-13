@@ -607,6 +607,7 @@ let purchases = [];
 let currentTab = 'pendientes';
 let editingId = null;
 let pendingImage = '';
+let convertingWishId = null;
 let unsubscribeSnapshot = null;
 let currentUid = null;
 let searchQuery = '';
@@ -760,6 +761,7 @@ function buildWishCardHtml(item, showActions, draggable){
         ${item.url ? `<a class="wish-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Ver producto ↗</a>` : ''}
         ${showActions ? `
           <div class="wish-actions">
+            <button class="btn-mini btn-arrived" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
             <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
             <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
           </div>
@@ -835,6 +837,7 @@ function buildWishListRowHtml(item, draggable){
           <div class="price"><b>${fmtMoney(item.price)}</b><small>aprox.</small></div>
         </div>
         <div class="card-actions">
+          <button class="btn-mini btn-arrived" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
           <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
           <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
         </div>
@@ -1154,7 +1157,21 @@ function openModal(item){
   updatePreview();
   backdrop.classList.add('open');
 }
-function closeModal(){ backdrop.classList.remove('open'); editingId = null; pendingImage = ''; }
+
+// Abre el modal de "nueva compra" ya rellenado con los datos de un deseo de la wishlist
+function openModalFromWish(wishItem){
+  convertingWishId = wishItem.id;
+  openModal(null);
+  document.getElementById('modalTitle').textContent = '🛒 Pasar a compras';
+  document.getElementById('btnSave').textContent = 'Añadir a compras';
+  document.getElementById('f-nombre').value = wishItem.name || '';
+  document.getElementById('f-precio').value = wishItem.price || '';
+  document.getElementById('f-imgurl').value = (wishItem.image && !wishItem.image.startsWith('data:')) ? wishItem.image : '';
+  pendingImage = wishItem.image || '';
+  updatePreview();
+}
+
+function closeModal(){ backdrop.classList.remove('open'); editingId = null; pendingImage = ''; convertingWishId = null; }
 
 document.getElementById('btnOpenAdd').addEventListener('click', ()=>openModal(null));
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -1205,7 +1222,14 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
     payload.order = existing.order ?? payload.order;
   }
   await saveItem(id, payload);
+
+  const wasConverting = convertingWishId;
   closeModal();
+
+  if(wasConverting){
+    await deleteWishItem(wasConverting);
+    document.getElementById('modeCompras').click();
+  }
 });
 
 document.getElementById('list').addEventListener('click', async (e)=>{
@@ -1631,7 +1655,9 @@ document.getElementById('wishlistList').addEventListener('click', async (e)=>{
   const item = wishlistItems.find(w=>w.id===id);
   if(!item) return;
 
-  if(action === 'editwish'){
+  if(action === 'towishbuy'){
+    openModalFromWish(item);
+  } else if(action === 'editwish'){
     openWishModal(item);
   } else if(action === 'deletewish'){
     if(!confirm(`¿Eliminar "${item.name}" de la wishlist? No hay papelera para esto, se borra directamente.`)) return;
