@@ -1089,6 +1089,19 @@ function render(){
 }
 
 // Barra de proximidad al lanzamiento: roja si falta mucho, naranja a medio camino, verde si está cerca
+// Convierte días restantes al formato más legible: días si es poco, semanas si es medio, meses si es mucho
+function formatTimeRemaining(days){
+  if(days < 14){
+    return `${days} día${days === 1 ? '' : 's'}`;
+  } else if(days < 60){
+    const weeks = Math.round(days / 7);
+    return `${weeks} semana${weeks === 1 ? '' : 's'}`;
+  } else {
+    const months = Math.round(days / 30);
+    return `${months} mes${months === 1 ? '' : 'es'}`;
+  }
+}
+
 function buildLaunchProgressHtml(p){
   if(!p.launchDate) return '';
 
@@ -1106,7 +1119,7 @@ function buildLaunchProgressHtml(p){
     colorClass = 'fill-green';
     label = daysRemaining === 0 ? '¡Sale hoy!' : 'Ya debería estar disponible';
   } else {
-    label = `Quedan ${daysRemaining} día${daysRemaining === 1 ? '' : 's'}`;
+    label = `Quedan ${formatTimeRemaining(daysRemaining)} · ${Math.round(pct)}%`;
     if(daysRemaining <= 60) colorClass = 'fill-green';
     else if(daysRemaining <= 120) colorClass = 'fill-orange';
     else colorClass = 'fill-red';
