@@ -671,9 +671,8 @@ onAuthStateChanged(auth, async (user)=>{
 
   if(user){
     currentUid = user.uid;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appScreen').classList.add('visible');
-    document.getElementById('userPhoto').src = user.photoURL || '';
+    // Ojo: todavía NO mostramos la app aquí. Esperamos a que Firestore confirme
+    // el acceso real (primer snapshot correcto de listenToPurchases) antes de revelar nada.
     listenToPurchases(user.uid);
     await migrateOldWishlist(user.uid);
     listenToWishlist(user.uid);
@@ -684,11 +683,19 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 
+function revealApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.add('visible');
+  const user = auth.currentUser;
+  if(user) document.getElementById('userPhoto').src = user.photoURL || '';
+}
+
 /* ---- Firestore live sync ---- */
 function listenToPurchases(uid){
   const colRef = collection(db, 'users', uid, 'purchases');
   unsubscribeSnapshot = onSnapshot(colRef, (snap)=>{
     purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    revealApp();
     render();
     setSync('Sincronizado', false);
     purgeExpiredTrash();
