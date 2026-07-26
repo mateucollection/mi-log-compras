@@ -206,8 +206,11 @@
     color:var(--teal);text-decoration:none;margin-top:2px;
   }
   .wish-footer{margin-top:auto;}
-  .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;padding-top:8px;}
-  .btn-icon-only{padding:5px 9px !important;font-size:13px !important;}
+  .wish-actions{display:flex;flex-wrap:nowrap;gap:6px;padding-top:8px;}
+  .btn-icon-only{
+    padding:6px 0 !important;font-size:14px !important;
+    flex:1;min-width:0;display:flex;align-items:center;justify-content:center;line-height:1;
+  }
   .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
   .launch-progress{margin-top:8px;}
@@ -795,10 +798,12 @@ function buildWishCardHtml(item, showActions, draggable){
         ${item.notes ? `<div class="wish-notes">${escapeHtml(item.notes)}</div>` : ''}
         ${item.url ? `<a class="wish-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Ver producto ↗</a>` : ''}
         ${showActions ? `
-          <div class="wish-actions">
-            <button class="btn-mini btn-arrived" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
-            <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
-            <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
+          <div class="wish-footer">
+            <div class="wish-actions">
+              <button class="btn-mini btn-arrived btn-icon-only" data-action="towishbuy" data-id="${item.id}" title="Ya comprado, pasar a compras">🛒</button>
+              <button class="btn-mini btn-edit btn-icon-only" data-action="editwish" data-id="${item.id}" title="Editar">✎</button>
+              <button class="btn-mini btn-del btn-icon-only" data-action="deletewish" data-id="${item.id}" title="Eliminar">🗑</button>
+            </div>
           </div>
         ` : ''}
       </div>
@@ -1209,10 +1214,10 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-footer">
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
-            ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
-            <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Marcar como recibido">✔</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer recibido">↺</button>`}
+            <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✎</button>
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
-            <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
+            <button class="btn-mini btn-del btn-icon-only" data-action="delete" data-id="${p.id}" title="Eliminar">🗑</button>
           </div>
         </div>
       </div>
