@@ -1170,6 +1170,22 @@ function buildLaunchProgressHtml(p){
   `;
 }
 
+// Etiqueta de entrega: diferencia claramente "me lo envían a X" de "lo recojo en X"
+function buildDeliveryBadgeHtml(p){
+  if(p.delivery === 'Envío'){
+    return `<span class="badge envio">📦 Envío${p.shippingDestination ? ' → ' + escapeHtml(p.shippingDestination) : ''}</span>`;
+  }
+  return `<span class="badge tienda">🏪 Recoger${p.store ? ' en ' + escapeHtml(p.store) : ''}</span>`;
+}
+
+// Misma info como línea aparte, para la vista de tarjetas
+function buildDeliveryLineHtml(p){
+  if(p.delivery === 'Envío'){
+    return p.shippingDestination ? `<div class="wish-notes">📦 Envío → ${escapeHtml(p.shippingDestination)}</div>` : '';
+  }
+  return p.store ? `<div class="wish-notes">🏪 Recoger en ${escapeHtml(p.store)}</div>` : '';
+}
+
 function buildPurchaseRowHtml(p, isDraggable){
   return `
     <div class="card ${p.arrived ? 'done' : ''} ${isDraggable ? 'draggable-mode' : ''}" ${isDraggable ? `draggable="true" data-drag-id="${p.id}"` : ''}>
@@ -1185,7 +1201,7 @@ function buildPurchaseRowHtml(p, isDraggable){
               <span>📦 <b>${p.units || 1}</b> ud.</span>
               <span>🛒 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
               <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
-              <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}${p.delivery==='Envío' && p.shippingDestination ? ' → ' + escapeHtml(p.shippingDestination) : ''}</span>
+              ${buildDeliveryBadgeHtml(p)}
               ${p.notPaid ? `<span class="badge unpaid-badge">💰 Sin pagar</span>` : ''}
             </div>
           </div>
@@ -1214,7 +1230,7 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-price">${fmtMoney(p.price)}${p.notPaid ? ' <span class="unpaid-tag">(reservado)</span>' : ''}</div>
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
-        ${p.delivery==='Envío' && p.shippingDestination ? `<div class="wish-notes">📦 → ${escapeHtml(p.shippingDestination)}</div>` : ''}
+        ${buildDeliveryLineHtml(p)}
         <div class="wish-footer">
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
