@@ -205,7 +205,9 @@
     font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
     color:var(--teal);text-decoration:none;margin-top:2px;
   }
-  .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:auto;padding-top:8px;}
+  .wish-footer{margin-top:auto;}
+  .wish-actions{display:flex;flex-wrap:wrap;gap:6px 8px;padding-top:8px;}
+  .btn-icon-only{padding:5px 9px !important;font-size:13px !important;}
   .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
   .launch-progress{margin-top:8px;}
@@ -1184,7 +1186,7 @@ function buildPurchaseRowHtml(p, isDraggable){
         <div class="card-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
-          ${!p.arrived ? `<button class="btn-mini btn-edit" data-action="duplicate" data-id="${p.id}">📋 Duplicar</button>` : ''}
+          ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
           <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
         </div>
       </div>
@@ -1204,12 +1206,14 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
         ${p.delivery==='Envío' && p.shippingDestination ? `<div class="wish-notes">📦 → ${escapeHtml(p.shippingDestination)}</div>` : ''}
-        ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
-        <div class="wish-actions">
-          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
-          <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
-          ${!p.arrived ? `<button class="btn-mini btn-edit" data-action="duplicate" data-id="${p.id}">📋 Duplicar</button>` : ''}
-          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
+        <div class="wish-footer">
+          ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
+          <div class="wish-actions">
+            ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
+            <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+            ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
+            <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
+          </div>
         </div>
       </div>
     </div>
