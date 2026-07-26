@@ -207,10 +207,14 @@
   }
   .wish-footer{margin-top:auto;}
   .wish-actions{display:flex;flex-wrap:nowrap;gap:6px;padding-top:8px;}
+  /* Botones de solo icono: ancho fijo por defecto (vista listado) */
   .btn-icon-only{
-    padding:6px 0 !important;font-size:14px !important;
-    flex:1;min-width:0;display:flex;align-items:center;justify-content:center;line-height:1;
+    padding:5px 0 !important;font-size:13px !important;
+    width:34px;flex:0 0 34px;
+    display:inline-flex;align-items:center;justify-content:center;line-height:1;
   }
+  /* En la vista de tarjetas se reparten el ancho disponible a partes iguales */
+  .wish-actions .btn-icon-only{flex:1 1 0;width:auto;}
   .wish-actions .btn-mini{padding:5px 8px;font-size:10px;}
 
   .launch-progress{margin-top:8px;}
@@ -422,7 +426,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="pendientes" id="tabPendientes">EN CURSO <span class="count" id="countPendientes">0</span></button>
     <button class="tab-btn" data-tab="historial" id="tabHistorial">HISTORIAL <span class="count" id="countHistorial">0</span></button>
-    <button class="tab-btn" data-tab="papelera" id="tabPapelera">🗑 PAPELERA <span class="count" id="countPapelera">0</span></button>
+    <button class="tab-btn" data-tab="papelera" id="tabPapelera">🗑️ PAPELERA <span class="count" id="countPapelera">0</span></button>
     <button class="stats-btn" id="btnStats">📊 Estadísticas</button>
     <button class="fab" id="btnOpenAdd">+ Nueva anotación</button>
   </div>
@@ -518,7 +522,7 @@
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
     <button class="modal-close" id="modalClose">✕</button>
-    <h2 id="modalTitle">✎ Nueva anotación</h2>
+    <h2 id="modalTitle">📝 Nueva anotación</h2>
     <div class="grid">
       <div class="full">
         <label for="f-nombre">Producto</label>
@@ -801,8 +805,8 @@ function buildWishCardHtml(item, showActions, draggable){
           <div class="wish-footer">
             <div class="wish-actions">
               <button class="btn-mini btn-arrived btn-icon-only" data-action="towishbuy" data-id="${item.id}" title="Ya comprado, pasar a compras">🛒</button>
-              <button class="btn-mini btn-edit btn-icon-only" data-action="editwish" data-id="${item.id}" title="Editar">✎</button>
-              <button class="btn-mini btn-del btn-icon-only" data-action="deletewish" data-id="${item.id}" title="Eliminar">🗑</button>
+              <button class="btn-mini btn-edit btn-icon-only" data-action="editwish" data-id="${item.id}" title="Editar">✏️</button>
+              <button class="btn-mini btn-del btn-icon-only" data-action="deletewish" data-id="${item.id}" title="Eliminar">🗑️</button>
             </div>
           </div>
         ` : ''}
@@ -878,8 +882,8 @@ function buildWishListRowHtml(item, draggable){
         </div>
         <div class="card-actions">
           <button class="btn-mini btn-arrived" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
-          <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✎ Editar</button>
-          <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑 Eliminar</button>
+          <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✏️ Editar</button>
+          <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑️ Eliminar</button>
         </div>
       </div>
     </div>
@@ -1102,8 +1106,8 @@ function render(){
               <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
             </div>
             <div class="card-actions">
-              <button class="btn-mini btn-arrived" data-action="restore" data-id="${p.id}">↺ Restaurar</button>
-              <button class="btn-mini btn-del" data-action="purge" data-id="${p.id}">✕ Eliminar definitivamente</button>
+              <button class="btn-mini btn-arrived" data-action="restore" data-id="${p.id}">↩️ Restaurar</button>
+              <button class="btn-mini btn-del" data-action="purge" data-id="${p.id}">🗑️ Eliminar definitivamente</button>
             </div>
           </div>
         </div>
@@ -1189,10 +1193,10 @@ function buildPurchaseRowHtml(p, isDraggable){
         </div>
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
-          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
-          <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✅ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
+          <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✏️ Editar</button>
           ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
-          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
+          <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑️ Eliminar</button>
         </div>
       </div>
     </div>
@@ -1214,10 +1218,10 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-footer">
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
-            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Marcar como recibido">✔</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer recibido">↺</button>`}
-            <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✎</button>
+            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Marcar como recibido">✅</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer recibido">↩️</button>`}
+            <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✏️</button>
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
-            <button class="btn-mini btn-del btn-icon-only" data-action="delete" data-id="${p.id}" title="Eliminar">🗑</button>
+            <button class="btn-mini btn-del btn-icon-only" data-action="delete" data-id="${p.id}" title="Eliminar">🗑️</button>
           </div>
         </div>
       </div>
@@ -1248,7 +1252,7 @@ function toggleDestinoField(){
 
 function openModal(item){
   editingId = item ? item.id : null;
-  document.getElementById('modalTitle').textContent = item ? '✎ Editar anotación' : '✎ Nueva anotación';
+  document.getElementById('modalTitle').textContent = item ? '✏️ Editar anotación' : '📝 Nueva anotación';
   document.getElementById('btnSave').textContent = item ? 'Guardar cambios' : 'Añadir a la lista';
   document.getElementById('f-nombre').value = item ? item.name : '';
   document.getElementById('f-tienda').value = item ? item.store : '';
@@ -1499,15 +1503,15 @@ function renderBudget(){
   let statusColor, statusText, detailText;
   if(spent <= MONTHLY_BUDGET * 0.8){
     statusColor = 'var(--teal)';
-    statusText = '✔ Dentro del presupuesto';
+    statusText = '✅ Dentro del presupuesto';
     detailText = `Te quedan ${fmtMoney(remaining)}${isCurrentMonth ? ' este mes' : ''}`;
   } else if(spent <= MONTHLY_BUDGET){
     statusColor = 'var(--brass)';
-    statusText = '⚠ Cerca del límite';
+    statusText = '⚠️ Cerca del límite';
     detailText = `Te quedan ${fmtMoney(remaining)}${isCurrentMonth ? ' este mes' : ''}`;
   } else {
     statusColor = 'var(--wax-red)';
-    statusText = '✕ Límite superado';
+    statusText = '🔴 Límite superado';
     detailText = `Te pasaste en ${fmtMoney(Math.abs(remaining))}`;
   }
 
@@ -1688,7 +1692,7 @@ function updateWishPreview(){
 }
 function openWishModal(item){
   editingWishId = item ? item.id : null;
-  document.getElementById('wishModalTitle').textContent = item ? '✎ Editar deseo' : '🎁 Nuevo deseo';
+  document.getElementById('wishModalTitle').textContent = item ? '✏️ Editar deseo' : '🎁 Nuevo deseo';
   document.getElementById('wBtnSave').textContent = item ? 'Guardar cambios' : 'Añadir a la wishlist';
   document.getElementById('w-nombre').value = item ? item.name : '';
   document.getElementById('w-precio').value = item ? (item.price || '') : '';
