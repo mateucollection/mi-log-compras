@@ -114,6 +114,8 @@
   .totals{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:24px 0 28px;}
   .pill{background:var(--pill-bg-grad);border:1px solid var(--pill-border);border-radius:10px;padding:12px 20px;text-align:center;min-width:130px;}
   .pill b{display:block;font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--brass-light);}
+  .pill.pill-ready{border-color:var(--teal);}
+  .pill.pill-ready b{color:#4ecfa8;}
   .pill span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}
 
   .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid var(--pill-border);align-items:center;flex-wrap:wrap;}
@@ -349,6 +351,8 @@
   .card.trashed{border-style:dashed;opacity:.82;}
   .badge.trash-badge{background:#f1dcdc;color:var(--wax-red);}
   .badge.unpaid-badge{background:#f1e2c2;color:#8a5f14;}
+  .badge.ready-badge{background:#d5ece4;color:#155c48;font-weight:700;}
+  .ready-note{color:#155c48 !important;font-weight:700;font-style:normal !important;}
   .unpaid-tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a5f14;font-weight:400;}
 
   .stamp{position:absolute;top:14px;right:16px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--teal);border:2px solid var(--teal);padding:2px 8px;border-radius:4px;transform:rotate(7deg);opacity:.85;}
@@ -1045,9 +1049,11 @@ function render(){
 
   const totalPendiente = pendientes.reduce((s,p)=>s+Number(p.price||0),0);
   const unidadesPendientes = pendientes.reduce((s,p)=>s+Number(p.units||0),0);
+  const listosParaRecoger = pendientes.filter(p => p.atLocation).length;
   document.getElementById('totals').innerHTML = `
     <div class="pill"><b>${fmtMoney(totalPendiente)}</b><span>Pendiente de recibir</span></div>
     <div class="pill"><b>${unidadesPendientes}</b><span>Unidades en camino</span></div>
+    ${listosParaRecoger > 0 ? `<div class="pill pill-ready"><b>${listosParaRecoger}</b><span>📍 Listos para recoger</span></div>` : ''}
   `;
 
   const currentMonthKey = getCurrentMonthKey();
@@ -1200,16 +1206,19 @@ function buildPurchaseRowHtml(p, isDraggable){
               <span>🏬 <b>${escapeHtml(p.store || '—')}</b></span>
               <span>📦 <b>${p.units || 1}</b> ud.</span>
               <span>🛒 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
+              ${p.arrived && p.arrivedAt ? `<span>🙌 En mi poder <b>${fmtDate(p.arrivedAt)}</b></span>` : ''}
               <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
               ${buildDeliveryBadgeHtml(p)}
               ${p.notPaid ? `<span class="badge unpaid-badge">💰 Sin pagar</span>` : ''}
+              ${!p.arrived && p.atLocation ? `<span class="badge ready-badge">📍 ${p.delivery === 'Envío' ? 'Ya ha llegado' : 'Listo para recoger'}</span>` : ''}
             </div>
           </div>
           <div class="price"><b>${fmtMoney(p.price)}</b><small>${p.notPaid ? 'reservado' : 'total'}</small></div>
         </div>
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
-          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✅ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
+          ${!p.arrived ? `<button class="btn-mini ${p.atLocation ? 'btn-arrived' : 'btn-edit'} btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
+          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">🙌 Ya lo tengo</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✏️ Editar</button>
           ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
           <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑️ Eliminar</button>
@@ -1231,10 +1240,12 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
         ${buildDeliveryLineHtml(p)}
+        ${!p.arrived && p.atLocation ? `<div class="wish-notes ready-note">📍 ${p.delivery === 'Envío' ? 'Ya ha llegado' : 'Listo para recoger'}</div>` : ''}
         <div class="wish-footer">
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
-            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Marcar como recibido">✅</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer recibido">↩️</button>`}
+            ${!p.arrived ? `<button class="btn-mini ${p.atLocation ? 'btn-arrived' : 'btn-edit'} btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
+            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Ya lo tengo en mano">🙌</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer">↩️</button>`}
             <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✏️</button>
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
             <button class="btn-mini btn-del btn-icon-only" data-action="delete" data-id="${p.id}" title="Eliminar">🗑️</button>
@@ -1363,6 +1374,8 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
     delivery,
     shippingDestination: delivery === 'Envío' ? document.getElementById('f-destino').value.trim() : '',
     image: pendingImage,
+    atLocation: false,
+    atLocationAt: null,
     arrived: false,
     arrivedAt: null,
     order: Date.now()
@@ -1371,6 +1384,8 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
   const id = editingId || uid();
   if(editingId){
     const existing = purchases.find(p=>p.id===editingId);
+    payload.atLocation = existing.atLocation ?? false;
+    payload.atLocationAt = existing.atLocationAt ?? null;
     payload.arrived = existing.arrived;
     payload.arrivedAt = existing.arrivedAt;
     payload.order = existing.order ?? payload.order;
@@ -1396,6 +1411,9 @@ document.getElementById('list').addEventListener('click', async (e)=>{
 
   if(action === 'arrive'){
     await saveItem(id, { ...item, arrived:true, arrivedAt: todayLocal() });
+  } else if(action === 'togglelocation'){
+    const nowAtLocation = !item.atLocation;
+    await saveItem(id, { ...item, atLocation: nowAtLocation, atLocationAt: nowAtLocation ? todayLocal() : null });
   } else if(action === 'undo'){
     await saveItem(id, { ...item, arrived:false, arrivedAt:null });
   } else if(action === 'edit'){
