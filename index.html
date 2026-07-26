@@ -1184,6 +1184,7 @@ function buildPurchaseRowHtml(p, isDraggable){
         <div class="card-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+          ${!p.arrived ? `<button class="btn-mini btn-edit" data-action="duplicate" data-id="${p.id}">📋 Duplicar</button>` : ''}
           <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
         </div>
       </div>
@@ -1207,6 +1208,7 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✎ Editar</button>
+          ${!p.arrived ? `<button class="btn-mini btn-edit" data-action="duplicate" data-id="${p.id}">📋 Duplicar</button>` : ''}
           <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑 Eliminar</button>
         </div>
       </div>
@@ -1265,6 +1267,26 @@ function openModalFromWish(wishItem){
   document.getElementById('f-precio').value = wishItem.price || '';
   document.getElementById('f-imgurl').value = (wishItem.image && !wishItem.image.startsWith('data:')) ? wishItem.image : '';
   pendingImage = wishItem.image || '';
+  updatePreview();
+}
+
+// Duplica una compra ya existente: abre el formulario de "nueva" con todo prerrellenado como copia
+function duplicatePurchase(item){
+  openModal(null);
+  document.getElementById('modalTitle').textContent = '📋 Duplicar compra';
+  document.getElementById('btnSave').textContent = 'Añadir copia';
+  document.getElementById('f-nombre').value = item.name || '';
+  document.getElementById('f-tienda').value = item.store || '';
+  document.getElementById('f-unidades').value = item.units || 1;
+  document.getElementById('f-precio').value = item.price || '';
+  document.getElementById('f-nopagado').checked = !!item.notPaid;
+  document.getElementById('f-lanzamiento').value = item.launchDate || '';
+  document.getElementById('f-compra').value = item.purchaseDate || '';
+  document.querySelector(`input[name=f-entrega][value="${item.delivery || 'Envío'}"]`).checked = true;
+  document.getElementById('f-destino').value = item.shippingDestination || '';
+  toggleDestinoField();
+  document.getElementById('f-imgurl').value = (item.image && !item.image.startsWith('data:')) ? item.image : '';
+  pendingImage = item.image || '';
   updatePreview();
 }
 
@@ -1349,6 +1371,8 @@ document.getElementById('list').addEventListener('click', async (e)=>{
     await saveItem(id, { ...item, arrived:false, arrivedAt:null });
   } else if(action === 'edit'){
     openModal(item);
+  } else if(action === 'duplicate'){
+    duplicatePurchase(item);
   } else if(action === 'delete'){
     await saveItem(id, { ...item, trashed:true, trashedAt: new Date().toISOString() });
   } else if(action === 'restore'){
