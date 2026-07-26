@@ -139,6 +139,12 @@
   .radio-row{display:flex;gap:14px;margin-top:4px;}
   .radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer;}
 
+  .checkbox-row{
+    display:flex;align-items:center;gap:6px;margin-top:6px;
+    font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink-mute);cursor:pointer;
+  }
+  .checkbox-row input{cursor:pointer;}
+
   .img-picker{display:flex;gap:14px;align-items:center;}
   .img-preview-wrap{
     width:68px;height:68px;border-radius:50%;flex-shrink:0;position:relative;overflow:hidden;
@@ -333,6 +339,8 @@
 
   .card.trashed{border-style:dashed;opacity:.82;}
   .badge.trash-badge{background:#f1dcdc;color:var(--wax-red);}
+  .badge.unpaid-badge{background:#f1e2c2;color:#8a5f14;}
+  .unpaid-tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a5f14;font-weight:400;}
 
   .stamp{position:absolute;top:14px;right:16px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--teal);border:2px solid var(--teal);padding:2px 8px;border-radius:4px;transform:rotate(7deg);opacity:.85;}
 
@@ -527,7 +535,11 @@
       </div>
       <div><label for="f-tienda">Tienda</label><input type="text" id="f-tienda" list="storesList" placeholder="Ej. B-Game, Aquelarre..." autocomplete="off"><datalist id="storesList"></datalist></div>
       <div><label for="f-unidades">Unidades</label><input type="number" id="f-unidades" min="1" value="1"></div>
-      <div><label for="f-precio">Precio total (€)</label><input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00"></div>
+      <div>
+        <label for="f-precio">Precio total (€)</label>
+        <input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00">
+        <label class="checkbox-row"><input type="checkbox" id="f-nopagado"> Aún no pagado (solo reservado)</label>
+      </div>
       <div class="full dates-row">
         <div><label for="f-compra">Fecha de compra/reserva</label><input type="date" id="f-compra"></div>
         <div><label for="f-lanzamiento">Fecha de lanzamiento</label><input type="date" id="f-lanzamiento"></div>
@@ -538,6 +550,10 @@
           <label><input type="radio" name="f-entrega" value="Envío" checked> Envío</label>
           <label><input type="radio" name="f-entrega" value="Recogida"> Recogida</label>
         </div>
+      </div>
+      <div class="full" id="f-destino-wrap">
+        <label for="f-destino">¿Dónde llega el envío?</label>
+        <input type="text" id="f-destino" list="destinosList" placeholder="Ej. Mi casa en Barcelona, Stash de la Seu..." autocomplete="off"><datalist id="destinosList"></datalist>
       </div>
     </div>
     <div class="modal-actions">
@@ -974,6 +990,9 @@ function escapeHtml(str){ const div = document.createElement('div'); div.textCon
 function updateStoreSuggestions(){
   const stores = [...new Set(purchases.map(p => (p.store || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   document.getElementById('storesList').innerHTML = stores.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+
+  const destinos = [...new Set(purchases.map(p => (p.shippingDestination || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('destinosList').innerHTML = destinos.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
 }
 
 function updateFilterOptions(){
@@ -1022,7 +1041,7 @@ function render(){
 
   const currentMonthKey = getCurrentMonthKey();
   const spentThisMonth = purchases
-    .filter(p => !p.trashed && p.purchaseDate && p.purchaseDate.startsWith(currentMonthKey))
+    .filter(p => !p.trashed && !p.notPaid && p.purchaseDate && p.purchaseDate.startsWith(currentMonthKey))
     .reduce((s,p) => s + Number(p.price || 0), 0);
   document.getElementById('btnStats').classList.toggle('over-budget', spentThisMonth > MONTHLY_BUDGET);
 
@@ -1155,10 +1174,11 @@ function buildPurchaseRowHtml(p, isDraggable){
               <span>📦 <b>${p.units || 1}</b> ud.</span>
               <span>🛒 Comprado <b>${fmtDate(p.purchaseDate)}</b></span>
               <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
-              <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}</span>
+              <span class="badge ${p.delivery==='Envío' ? 'envio':'tienda'}">${p.delivery}${p.delivery==='Envío' && p.shippingDestination ? ' → ' + escapeHtml(p.shippingDestination) : ''}</span>
+              ${p.notPaid ? `<span class="badge unpaid-badge">💰 Sin pagar</span>` : ''}
             </div>
           </div>
-          <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
+          <div class="price"><b>${fmtMoney(p.price)}</b><small>${p.notPaid ? 'reservado' : 'total'}</small></div>
         </div>
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
@@ -1179,9 +1199,10 @@ function buildPurchaseGridHtml(p, isDraggable){
       ${p.image ? `<img class="wish-img" src="${escapeHtml(p.image)}" alt="">` : `<div class="wish-img-empty">🏴‍☠️</div>`}
       <div class="wish-body">
         <div class="wish-name">${escapeHtml(p.name)}</div>
-        <div class="wish-price">${fmtMoney(p.price)}</div>
+        <div class="wish-price">${fmtMoney(p.price)}${p.notPaid ? ' <span class="unpaid-tag">(reservado)</span>' : ''}</div>
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
+        ${p.delivery==='Envío' && p.shippingDestination ? `<div class="wish-notes">📦 → ${escapeHtml(p.shippingDestination)}</div>` : ''}
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="wish-actions">
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">✔ Recibido</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↺ Deshacer</button>`}
@@ -1209,6 +1230,11 @@ function updatePreview(){
     icon.classList.remove('hidden');
   }
 }
+function toggleDestinoField(){
+  const isEnvio = document.querySelector('input[name=f-entrega]:checked').value === 'Envío';
+  document.getElementById('f-destino-wrap').style.display = isEnvio ? 'block' : 'none';
+}
+
 function openModal(item){
   editingId = item ? item.id : null;
   document.getElementById('modalTitle').textContent = item ? '✎ Editar anotación' : '✎ Nueva anotación';
@@ -1217,9 +1243,12 @@ function openModal(item){
   document.getElementById('f-tienda').value = item ? item.store : '';
   document.getElementById('f-unidades').value = item ? item.units : 1;
   document.getElementById('f-precio').value = item ? item.price : '';
+  document.getElementById('f-nopagado').checked = item ? !!item.notPaid : false;
   document.getElementById('f-lanzamiento').value = item ? item.launchDate || '' : '';
   document.getElementById('f-compra').value = item ? item.purchaseDate || '' : '';
   document.querySelector(`input[name=f-entrega][value="${item ? item.delivery : 'Envío'}"]`).checked = true;
+  document.getElementById('f-destino').value = item ? (item.shippingDestination || '') : '';
+  toggleDestinoField();
   document.getElementById('f-imgurl').value = (item && item.image && !item.image.startsWith('data:')) ? item.image : '';
   pendingImage = item ? (item.image || '') : '';
   updatePreview();
@@ -1247,6 +1276,9 @@ document.getElementById('btnCancel').addEventListener('click', closeModal);
 // (El modal de compras ya no se cierra al hacer clic fuera, solo con la X o "Cancelar")
 
 document.getElementById('f-imgurl').addEventListener('input', (e)=>{ pendingImage = e.target.value.trim(); updatePreview(); });
+document.querySelectorAll('input[name=f-entrega]').forEach(radio => {
+  radio.addEventListener('change', toggleDestinoField);
+});
 document.getElementById('f-imgfile').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
@@ -1268,14 +1300,17 @@ document.getElementById('btnSave').addEventListener('click', async ()=>{
   const name = document.getElementById('f-nombre').value.trim();
   if(!name){ alert('Ponle un nombre al producto antes de guardarlo.'); return; }
 
+  const delivery = document.querySelector('input[name=f-entrega]:checked').value;
   const payload = {
     name,
     store: document.getElementById('f-tienda').value.trim(),
     units: Number(document.getElementById('f-unidades').value || 1),
     price: Number(document.getElementById('f-precio').value || 0),
+    notPaid: document.getElementById('f-nopagado').checked,
     launchDate: document.getElementById('f-lanzamiento').value,
     purchaseDate: document.getElementById('f-compra').value,
-    delivery: document.querySelector('input[name=f-entrega]:checked').value,
+    delivery,
+    shippingDestination: delivery === 'Envío' ? document.getElementById('f-destino').value.trim() : '',
     image: pendingImage,
     arrived: false,
     arrivedAt: null,
@@ -1379,7 +1414,7 @@ function updateYearOptions(){
 
 function renderChart(){
   const container = document.getElementById('chartContainer');
-  const relevant = purchases.filter(p => !p.trashed && p.purchaseDate && p.purchaseDate.startsWith(String(selectedYear)));
+  const relevant = purchases.filter(p => !p.trashed && !p.notPaid && p.purchaseDate && p.purchaseDate.startsWith(String(selectedYear)));
   const monthNames = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
   const monthTotals = Array(12).fill(0);
@@ -1422,7 +1457,7 @@ function renderBudget(){
   const isCurrentMonth = budgetViewMonth === getCurrentMonthKey();
 
   const spent = purchases
-    .filter(p => !p.trashed && p.purchaseDate && p.purchaseDate.startsWith(budgetViewMonth))
+    .filter(p => !p.trashed && !p.notPaid && p.purchaseDate && p.purchaseDate.startsWith(budgetViewMonth))
     .reduce((s,p) => s + Number(p.price || 0), 0);
 
   const pct = Math.min(100, (spent / MONTHLY_BUDGET) * 100);
