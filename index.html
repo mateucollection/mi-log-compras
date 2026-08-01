@@ -342,8 +342,6 @@
 
   .card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
   .btn-mini{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:5px;border:1px solid transparent;cursor:pointer;background:none;}
-  .btn-arrived{background:var(--teal);color:#eafaf7;box-shadow:0 2px 0 #123f3c;}
-  .btn-arrived:active{transform:translateY(1px);box-shadow:none;}
   .btn-undo{border-color:#a89a72;color:var(--ink-mute);}
   .btn-edit{border-color:#8fa5b0;color:var(--teal);}
   .btn-del{border-color:#c9a1a1;color:var(--wax-red);}
@@ -808,7 +806,7 @@ function buildWishCardHtml(item, showActions, draggable){
         ${showActions ? `
           <div class="wish-footer">
             <div class="wish-actions">
-              <button class="btn-mini btn-arrived btn-icon-only" data-action="towishbuy" data-id="${item.id}" title="Ya comprado, pasar a compras">🛒</button>
+              <button class="btn-mini btn-edit btn-icon-only" data-action="towishbuy" data-id="${item.id}" title="Ya comprado, pasar a compras">🛒</button>
               <button class="btn-mini btn-edit btn-icon-only" data-action="editwish" data-id="${item.id}" title="Editar">✏️</button>
               <button class="btn-mini btn-del btn-icon-only" data-action="deletewish" data-id="${item.id}" title="Eliminar">🗑️</button>
             </div>
@@ -885,7 +883,7 @@ function buildWishListRowHtml(item, draggable){
           <div class="price"><b>${fmtMoney(item.price)}</b><small>aprox.</small></div>
         </div>
         <div class="card-actions">
-          <button class="btn-mini btn-arrived" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
+          <button class="btn-mini btn-edit" data-action="towishbuy" data-id="${item.id}">🛒 Ya comprado</button>
           <button class="btn-mini btn-edit" data-action="editwish" data-id="${item.id}">✏️ Editar</button>
           <button class="btn-mini btn-del" data-action="deletewish" data-id="${item.id}">🗑️ Eliminar</button>
         </div>
@@ -1119,7 +1117,7 @@ function render(){
               <div class="price"><b>${fmtMoney(p.price)}</b><small>total</small></div>
             </div>
             <div class="card-actions">
-              <button class="btn-mini btn-arrived" data-action="restore" data-id="${p.id}">↩️ Restaurar</button>
+              <button class="btn-mini btn-edit" data-action="restore" data-id="${p.id}">↩️ Restaurar</button>
               <button class="btn-mini btn-del" data-action="purge" data-id="${p.id}">🗑️ Eliminar definitivamente</button>
             </div>
           </div>
@@ -1225,7 +1223,7 @@ function buildPurchaseRowHtml(p, isDraggable){
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
           ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
-          ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">🙌 Ya lo tengo</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
+          ${!p.arrived ? `<button class="btn-mini btn-edit" data-action="arrive" data-id="${p.id}">🙌 Ya lo tengo</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✏️ Editar</button>
           ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
           <button class="btn-mini btn-del" data-action="delete" data-id="${p.id}">🗑️ Eliminar</button>
@@ -1252,7 +1250,7 @@ function buildPurchaseGridHtml(p, isDraggable){
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
-            ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Ya lo tengo en mano">🙌</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer">↩️</button>`}
+            ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="arrive" data-id="${p.id}" title="Ya lo tengo en mano">🙌</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer">↩️</button>`}
             <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✏️</button>
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
             <button class="btn-mini btn-del btn-icon-only" data-action="delete" data-id="${p.id}" title="Eliminar">🗑️</button>
