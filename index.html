@@ -351,8 +351,7 @@
   .card.trashed{border-style:dashed;opacity:.82;}
   .badge.trash-badge{background:#f1dcdc;color:var(--wax-red);}
   .badge.unpaid-badge{background:#f1e2c2;color:#8a5f14;}
-  .badge.ready-badge{background:#d5ece4;color:#155c48;font-weight:700;}
-  .ready-note{color:#155c48 !important;font-weight:700;font-style:normal !important;}
+  .tab-btn.has-items .count{background:var(--teal);color:#eafaf7;}
   .unpaid-tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a5f14;font-weight:400;}
 
   .stamp{position:absolute;top:14px;right:16px;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--teal);border:2px solid var(--teal);padding:2px 8px;border-radius:4px;transform:rotate(7deg);opacity:.85;}
@@ -429,6 +428,7 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="pendientes" id="tabPendientes">EN CURSO <span class="count" id="countPendientes">0</span></button>
+    <button class="tab-btn" data-tab="pararecoger" id="tabParaRecoger">📍 POR RECOGER <span class="count" id="countParaRecoger">0</span></button>
     <button class="tab-btn" data-tab="historial" id="tabHistorial">HISTORIAL <span class="count" id="countHistorial">0</span></button>
     <button class="tab-btn" data-tab="papelera" id="tabPapelera">🗑️ PAPELERA <span class="count" id="countPapelera">0</span></button>
     <button class="stats-btn" id="btnStats">📊 Estadísticas</button>
@@ -1039,21 +1039,24 @@ function render(){
     name: (a,b) => (a.name||'').localeCompare(b.name||'') || (a.launchDate||'').localeCompare(b.launchDate||''),
     custom: (a,b) => (a.order||0) - (b.order||0),
   };
-  const pendientes = purchases.filter(p=>!p.arrived && !p.trashed).sort(sortComparators[sortMode] || sortComparators.launch);
+  const pendientes = purchases.filter(p=>!p.arrived && !p.trashed && !p.atLocation).sort(sortComparators[sortMode] || sortComparators.launch);
+  const paraRecoger = purchases.filter(p=>!p.arrived && !p.trashed && p.atLocation).sort((a,b)=> (b.atLocationAt||'').localeCompare(a.atLocationAt||''));
   const historial = purchases.filter(p=>p.arrived && !p.trashed).sort((a,b)=> (b.arrivedAt||'').localeCompare(a.arrivedAt||''));
   const papelera = purchases.filter(p=>p.trashed).sort((a,b)=> (b.trashedAt||'').localeCompare(a.trashedAt||''));
 
   document.getElementById('countPendientes').textContent = pendientes.length;
+  document.getElementById('countParaRecoger').textContent = paraRecoger.length;
   document.getElementById('countHistorial').textContent = historial.length;
   document.getElementById('countPapelera').textContent = papelera.length;
+  document.getElementById('tabParaRecoger').classList.toggle('has-items', paraRecoger.length > 0);
 
-  const totalPendiente = pendientes.reduce((s,p)=>s+Number(p.price||0),0);
-  const unidadesPendientes = pendientes.reduce((s,p)=>s+Number(p.units||0),0);
-  const listosParaRecoger = pendientes.filter(p => p.atLocation).length;
+  const enCursoTotal = [...pendientes, ...paraRecoger];
+  const totalPendiente = enCursoTotal.reduce((s,p)=>s+Number(p.price||0),0);
+  const unidadesPendientes = enCursoTotal.reduce((s,p)=>s+Number(p.units||0),0);
   document.getElementById('totals').innerHTML = `
     <div class="pill"><b>${fmtMoney(totalPendiente)}</b><span>Pendiente de recibir</span></div>
     <div class="pill"><b>${unidadesPendientes}</b><span>Unidades en camino</span></div>
-    ${listosParaRecoger > 0 ? `<div class="pill pill-ready"><b>${listosParaRecoger}</b><span>📍 Listos para recoger</span></div>` : ''}
+    ${paraRecoger.length > 0 ? `<div class="pill pill-ready"><b>${paraRecoger.length}</b><span>📍 Por recoger</span></div>` : ''}
   `;
 
   const currentMonthKey = getCurrentMonthKey();
@@ -1063,7 +1066,10 @@ function render(){
   document.getElementById('btnStats').classList.toggle('over-budget', spentThisMonth > MONTHLY_BUDGET);
 
   const list = document.getElementById('list');
-  let data = currentTab === 'pendientes' ? pendientes : currentTab === 'historial' ? historial : papelera;
+  let data = currentTab === 'pendientes' ? pendientes
+    : currentTab === 'pararecoger' ? paraRecoger
+    : currentTab === 'historial' ? historial
+    : papelera;
 
   const query = searchQuery.trim().toLowerCase();
   if(query){
@@ -1086,6 +1092,7 @@ function render(){
     const hasActiveFilters = query || filterDelivery !== 'all' || filterMonth !== 'all' || filterYear !== 'all' || filterStore !== 'all';
     const emptyMsg = hasActiveFilters ? ['Sin resultados','Prueba con otra búsqueda o quita los filtros.']
       : currentTab==='pendientes' ? ['Nada en curso','Añade tu próxima reserva con el botón de arriba.']
+      : currentTab==='pararecoger' ? ['Nada por recoger','Cuando marques algo con 📍 (ya ha llegado), aparecerá aquí hasta que lo tengas en mano.']
       : currentTab==='historial' ? ['Historial vacío','Cuando marques algo como recibido, aparecerá aquí.']
       : ['Papelera vacía','Lo que elimines aparecerá aquí durante 30 días antes de borrarse para siempre.'];
     list.innerHTML = `<div class="empty"><b>${emptyMsg[0]}</b>${emptyMsg[1]}</div>`;
@@ -1210,14 +1217,14 @@ function buildPurchaseRowHtml(p, isDraggable){
               <span>🚀 Llega <b>${fmtDate(p.launchDate)}</b></span>
               ${buildDeliveryBadgeHtml(p)}
               ${p.notPaid ? `<span class="badge unpaid-badge">💰 Sin pagar</span>` : ''}
-              ${!p.arrived && p.atLocation ? `<span class="badge ready-badge">📍 ${p.delivery === 'Envío' ? 'Ya ha llegado' : 'Listo para recoger'}</span>` : ''}
+              ${!p.arrived && p.atLocation && p.atLocationAt ? `<span>📍 Llegó <b>${fmtDate(p.atLocationAt)}</b></span>` : ''}
             </div>
           </div>
           <div class="price"><b>${fmtMoney(p.price)}</b><small>${p.notPaid ? 'reservado' : 'total'}</small></div>
         </div>
         ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
         <div class="card-actions">
-          ${!p.arrived ? `<button class="btn-mini ${p.atLocation ? 'btn-arrived' : 'btn-edit'} btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
+          ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
           ${!p.arrived ? `<button class="btn-mini btn-arrived" data-action="arrive" data-id="${p.id}">🙌 Ya lo tengo</button>` : `<button class="btn-mini btn-undo" data-action="undo" data-id="${p.id}">↩️ Deshacer</button>`}
           <button class="btn-mini btn-edit" data-action="edit" data-id="${p.id}">✏️ Editar</button>
           ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
@@ -1240,11 +1247,11 @@ function buildPurchaseGridHtml(p, isDraggable){
         <div class="wish-notes">🏬 ${escapeHtml(p.store || '—')} · 📦 ${p.units || 1} ud.</div>
         <div class="wish-notes">🛒 ${fmtDate(p.purchaseDate)} · 🚀 ${fmtDate(p.launchDate)}</div>
         ${buildDeliveryLineHtml(p)}
-        ${!p.arrived && p.atLocation ? `<div class="wish-notes ready-note">📍 ${p.delivery === 'Envío' ? 'Ya ha llegado' : 'Listo para recoger'}</div>` : ''}
+        ${!p.arrived && p.atLocation && p.atLocationAt ? `<div class="wish-notes">📍 Llegó ${fmtDate(p.atLocationAt)}</div>` : ''}
         <div class="wish-footer">
           ${!p.arrived ? buildLaunchProgressHtml(p) : ''}
           <div class="wish-actions">
-            ${!p.arrived ? `<button class="btn-mini ${p.atLocation ? 'btn-arrived' : 'btn-edit'} btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
+            ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="togglelocation" data-id="${p.id}" title="${p.atLocation ? 'Desmarcar: aún no ha llegado' : (p.delivery === 'Envío' ? 'Marcar: ya ha llegado al destino' : 'Marcar: ya está listo para recoger')}">📍</button>` : ''}
             ${!p.arrived ? `<button class="btn-mini btn-arrived btn-icon-only" data-action="arrive" data-id="${p.id}" title="Ya lo tengo en mano">🙌</button>` : `<button class="btn-mini btn-undo btn-icon-only" data-action="undo" data-id="${p.id}" title="Deshacer">↩️</button>`}
             <button class="btn-mini btn-edit btn-icon-only" data-action="edit" data-id="${p.id}" title="Editar">✏️</button>
             ${!p.arrived ? `<button class="btn-mini btn-edit btn-icon-only" data-action="duplicate" data-id="${p.id}" title="Duplicar">📋</button>` : ''}
